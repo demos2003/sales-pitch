@@ -25,8 +25,9 @@ export default function DashboardPage() {
 
   const name = user?.name;
 
-  // const { user } = useAuth()
-  const isFounder = false
+
+
+  const isFounder = user?.role === "founder";
   const [showFirstLoginModal, setShowFirstLoginModal] = useState(false)
 
   

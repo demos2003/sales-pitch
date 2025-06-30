@@ -36,25 +36,31 @@ export default function Header() {
     { name: "Messages", href: "/messages" },
   ]
 
-    const [user, setUser] = useState<any>(null);
-  
-    useEffect(() => {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    }, []);
-  
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
   const isFounder = user?.role === "founder";
 
-  const navigation = user ? privateNavigation : publicNavigation
+  const navigation = user ? privateNavigation : publicNavigation;
+
+  const logout = () => {
+    localStorage.removeItem("user")
+    window.location.href = "/auth";
+  }
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
           <Link href={user ? "/dashboard" : "/"} className="flex items-center">
-          <Image src="/SalesPitchLogo.png" alt="slaes-pitch-logo" width={70} height={70}/>
+            <Image src="/SalesPitchLogo.png" alt="slaes-pitch-logo" width={70} height={70} />
             <span className="text-xl font-bold">Sales Pitch</span>
           </Link>
         </div>
@@ -65,9 +71,8 @@ export default function Header() {
             <Link
               key={item.name}
               href={item.href}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                pathname === item.href ? "text-primary" : "text-muted-foreground"
-              }`}
+              className={`text-sm font-medium transition-colors hover:text-primary ${pathname === item.href ? "text-primary" : "text-muted-foreground"
+                }`}
             >
               {item.name}
             </Link>
@@ -110,8 +115,8 @@ export default function Header() {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                // onClick={logout}
+                <DropdownMenuItem
+                  onClick={logout}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
@@ -149,9 +154,8 @@ export default function Header() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  pathname === item.href ? "text-primary" : "text-muted-foreground"
-                }`}
+                className={`text-sm font-medium transition-colors hover:text-primary ${pathname === item.href ? "text-primary" : "text-muted-foreground"
+                  }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 {item.name}
