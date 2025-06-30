@@ -8,12 +8,23 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Users, Clock, Award, Briefcase, Star, MessageSquare, Edit, UserPlus } from "lucide-react"
 // import { useAuth } from "@/context/auth-context"
-import { useState } from "react"
+import {  useEffect, useState } from "react"
 import { toast } from "@/components/ui/use-toast"
 
 export default function ProjectPage({ params }: { params: { id: string } }) {
-  // const { user } = useAuth()
-  const isFounder = true;
+
+
+    const [user, setUser] = useState<any>(null);
+  
+    useEffect(() => {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    }, []);
+  
+    const isFounder = user?.role === "founder";
+
   const [hasApplied, setHasApplied] = useState(false)
 
   // This would normally be fetched from an API based on the ID
