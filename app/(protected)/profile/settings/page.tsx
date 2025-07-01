@@ -18,6 +18,8 @@ import { toast } from "@/components/ui/use-toast"
 // import { useAuth } from "@/context/auth-context"
 import { Upload, X, Save, FileText } from "lucide-react"
 import { InterestSelectionModal } from "@/components/interest-selection-modal"
+import { useGetCurrentUserQuery, useToggle2faMutation } from "@/api/features/auth/authApiSlice"
+
 
 export default function ProfileSettingsPage() {
   // const { user } = useAuth()
@@ -45,16 +47,26 @@ export default function ProfileSettingsPage() {
     languages: ["English", "Spanish"],
   })
 
-  // Check if it's the first login (in a real app, this would be stored in the user profile)
-  // useEffect(() => {
-  //   // Mock first-time login check
-  //   const isFirstLogin = !localStorage.getItem("hasLoggedInBefore")
+  const { data: user, isLoading, error, refetch } = useGetCurrentUserQuery()
+  const [toggle2fa, { isLoading: isToggling }] = useToggle2faMutation()
 
-  //   if (isFirstLogin && user?.role === "creative") {
-  //     setShowInterestModal(true)
-  //     localStorage.setItem("hasLoggedInBefore", "true")
-  //   }
-  // }, [user])
+  const handleToggle2FA = async () => {
+    try {
+      await toggle2fa(undefined).unwrap()
+      await refetch()
+      toast({
+        title: "2FA Toggled",
+        description: `Two-factor authentication has been ${user?.is2faEnabled ? "disabled" : "enabled"}.`,
+      })
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to toggle 2FA. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
 
   const handleSaveProfile = () => {
     // In a real app, this would call an API to update the profile
@@ -96,6 +108,8 @@ export default function ProfileSettingsPage() {
       description: "Your interests have been saved successfully.",
     })
   }
+
+
 
   return (
     <div className="container py-10">
@@ -532,7 +546,24 @@ export default function ProfileSettingsPage() {
                     <p className="text-sm text-muted-foreground mb-2">
                       Add an extra layer of security to your account.
                     </p>
-                    <Button variant="outline">Enable 2FA</Button>
+                    {isLoading ? (
+                      <p>Checking 2FA status...</p>
+                    ) : error ? (
+                      <p className="text-destructive">Failed to load 2FA status</p>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={handleToggle2FA}
+                        disabled={isToggling}
+                      >
+                        {isToggling
+                          ? "Processing..."
+                          : user?.is2faEnabled
+                            ? "Disable 2FA"
+                            : "Enable 2FA"}
+                      </Button>
+                    )}
+
                   </div>
 
                   <Separator />

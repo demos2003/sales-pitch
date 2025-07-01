@@ -4,7 +4,7 @@ import backendUrl from "./config";
 export const apiSlice = createApi({
   reducerPath: "api",
   baseQuery: fetchBaseQuery({
-    baseUrl: backendUrl.baseURL, // adjust as needed
+    baseUrl: backendUrl.hostedURL, // adjust as needed
     prepareHeaders: (headers, { getState }) => {
       const token = localStorage.getItem("token");
       if (token) {

@@ -91,31 +91,49 @@ export default function AuthPage() {
     }
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault()
 
-    try {
-      const response = await login({ email, password }).unwrap()
+  try {
+    const response = await login({ email, password }).unwrap()
 
-      // Store the auth response temporarily
-      setTempAuthData(response)
-
-      // Move to 2FA step
+    if (response?.message === "OTP sent. Please verify to complete login.") {
+      // Show 2FA screen
       setAuthStep("2fa")
+      setTempAuthData({ email }) // Store email to verify OTP later
 
       toast({
-        title: "Credentials verified",
-        description: "Please enter the 6-digit code sent to your authenticator app.",
+        title: "OTP Sent",
+        description: "Please enter the 6-digit code sent to your email.",
       })
 
-    } catch (err: any) {
-      toast({
-        title: "Login failed",
-        description: err?.data?.message || "Something went wrong",
-        variant: "destructive",
-      })
+      return
     }
+
+    // If response includes token and user, proceed to login
+    if (response.token && response.user) {
+      dispatch(setCredentials({ user: response.user, token: response.token }))
+      localStorage.setItem("user", JSON.stringify(response.user))
+      localStorage.setItem("token", response.token)
+
+      toast({
+        title: "Login successful",
+        description: `Welcome back, ${response.user.name}`,
+      })
+
+      setTimeout(() => router.push("/dashboard"), 1000)
+    } else {
+      throw new Error("Unexpected response format")
+    }
+  } catch (err: any) {
+    toast({
+      title: "Login failed",
+      description: err?.data?.message || "Something went wrong",
+      variant: "destructive",
+    })
   }
+}
+
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()

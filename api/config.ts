@@ -1,5 +1,5 @@
 const backendUrl: urlTypes = {
-    hostedURL:"https://ticketingappservice.onrender.com/api/v1" ,
+    hostedURL:"https://sales-pitch-server.onrender.com/api/" ,
     baseURL:"http://localhost:5000/api/"
 }
 
