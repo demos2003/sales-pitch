@@ -56,7 +56,7 @@ export default function ProfileSettingsPage() {
       await refetch()
       toast({
         title: "2FA Toggled",
-        description: `Two-factor authentication has been ${user?.is2faEnabled ? "disabled" : "enabled"}.`,
+        description: `Two-factor authentication has been ${user?.twoFactorEnabled ? "disabled" : "enabled"}.`,
       })
     } catch (err) {
       toast({
@@ -558,7 +558,7 @@ export default function ProfileSettingsPage() {
                       >
                         {isToggling
                           ? "Processing..."
-                          : user?.is2faEnabled
+                          : user?.twoFactorEnabled
                             ? "Disable 2FA"
                             : "Enable 2FA"}
                       </Button>

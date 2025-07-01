@@ -23,6 +23,8 @@ import { ArrowLeft, Shield, Smartphone, Mail } from "lucide-react"
 import { useLoginMutation, useSignUpMutation } from "@/api/features/auth/authApiSlice"
 import { useDispatch } from "react-redux"
 import { setCredentials } from "@/api/features/auth/authSlice"
+import { useVerifyOtpMutation } from "@/api/features/auth/authApiSlice"
+
 
 export default function AuthPage() {
   const router = useRouter()
@@ -40,7 +42,9 @@ export default function AuthPage() {
   const [loginRole, setLoginRole] = useState<string>(roleParam === "creative" ? "creative" : "founder")
   const [authStep, setAuthStep] = useState<"credentials" | "2fa">("credentials")
   const [resendCooldown, setResendCooldown] = useState(0)
-  const [tempAuthData, setTempAuthData] = useState<any>(null) // Store auth response temporarily
+  const [tempAuthData, setTempAuthData] = useState<any>(null)
+  const [verifyOtp] = useVerifyOtpMutation()
+
 
   // Add OTP-related state
   const [otp, setOtp] = useState("")
@@ -51,37 +55,38 @@ export default function AuthPage() {
   const [signUp] = useSignUpMutation()
 
   // Mock 2FA verification - automatically succeeds after 1.5 seconds
-  const verify2FA = async (otpValue: string) => {
-    setIsVerifying(true)
+const verify2FA = async (otpValue: string) => {
+  setIsVerifying(true)
 
-    try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+  try {
+    const response = await verifyOtp({ email: tempAuthData.email, otp: otpValue }).unwrap()
 
-      // For now, automatically succeed (since there's no real 2FA endpoint)
-      if (tempAuthData) {
-        dispatch(setCredentials({ user: tempAuthData.user, token: tempAuthData.token }))
-        localStorage.setItem("user", JSON.stringify(tempAuthData.user))
-        localStorage.setItem("token", tempAuthData.token)
+    if (response?.token && response?.user) {
+      dispatch(setCredentials({ user: response.user, token: response.token }))
+      localStorage.setItem("user", JSON.stringify(response.user))
+      localStorage.setItem("token", response.token)
 
-        toast({
-          title: "Login successful",
-          description: `Welcome back, ${tempAuthData.user.name}`,
-        })
-
-        setTimeout(() => router.push("/dashboard"), 1000)
-      }
-    } catch (error: any) {
       toast({
-        title: "Verification failed",
-        description: "Invalid verification code. Please try again.",
-        variant: "destructive",
+        title: "Login successful",
+        description: `Welcome back, ${response.user.name}`,
       })
-      setOtp("") // Clear the OTP input on error
-    } finally {
-      setIsVerifying(false)
+
+      setTimeout(() => router.push("/dashboard"), 1000)
+    } else {
+      throw new Error("Unexpected response from server.")
     }
+  } catch (error: any) {
+    toast({
+      title: "Verification failed",
+      description: error?.data?.message || "Invalid verification code. Please try again.",
+      variant: "destructive",
+    })
+    setOtp("") // Clear OTP
+  } finally {
+    setIsVerifying(false)
   }
+}
+
 
   // Handle OTP completion
   const handleOTPComplete = (value: string) => {
