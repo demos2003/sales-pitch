@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,20 +8,23 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { useCreateProjectMutation } from "@/api/features/projects/projectsSlice"
+import { useGetProjectByIdQuery, useUpdateProjectMutation } from "@/api/features/projects/projectsSlice"
 import { toast } from "sonner"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 
-export default function CreateProjectPage() {
+export default function EditProjectPage() {
   const [step, setStep] = useState(1)
   const router = useRouter()
-  const [createProject, { isLoading }] = useCreateProjectMutation()
+  const params = useParams()
+  const projectId = params.id as string
+
+  const { data: projectDataFetched, isLoading: isFetchingProject, isError: isProjectError } = useGetProjectByIdQuery(projectId)
+  const [updateProject, { isLoading: isUpdatingProject }] = useUpdateProjectMutation()
 
   const [projectData, setProjectData] = useState({
     title: "",
     description: "",
-    type: "startup", // Renamed from 'type'
+    projectType: "startup",
     teamSize: "3-5",
     rolesNeeded: [
       { skill: "", count: 1 }
@@ -34,13 +37,77 @@ export default function CreateProjectPage() {
     outcomes: "",
   })
 
+  // Function to map API timeline to component timeline
+  const mapTimelineFromApi = (apiTimeline: string) => {
+    if (!apiTimeline) return "3-6"
+    
+    const timeline = apiTimeline.toLowerCase()
+    if (timeline.includes("week") || timeline.includes("month")) {
+      const number = parseInt(timeline)
+      if (number < 1) return "0-1"
+      if (number <= 3) return "1-3"
+      if (number <= 6) return "3-6"
+      if (number <= 12) return "6-12"
+      return "ongoing"
+    }
+    return "3-6" // default
+  }
+
+  // Function to map API project type to component project type
+  const mapProjectTypeFromApi = (apiType: string) => {
+    const typeMap: { [key: string]: string } = {
+      "personal_project": "personal",
+      "startup": "startup",
+      "open_source": "open-source",
+      "social_impact": "social-impact",
+      "non_profit": "social-impact"
+    }
+    return typeMap[apiType] || "startup"
+  }
+
+  // Function to map API compensation array to single value
+  const mapCompensationFromApi = (apiCompensation: string[] | string) => {
+    if (Array.isArray(apiCompensation)) {
+      // Take the first compensation type or default to equity
+      const firstComp = apiCompensation[0]
+      if (firstComp === "portfolio") return "portfolio"
+      if (firstComp === "future_paid") return "future"
+      if (firstComp === "equity") return "equity"
+      return "equity"
+    }
+    return apiCompensation || "equity"
+  }
+
+  useEffect(() => {
+    if (projectDataFetched) {
+      console.log("API Data:", projectDataFetched) // Debug log
+      
+      setProjectData({
+        title: projectDataFetched.title || "",
+        description: projectDataFetched.description || "",
+        // Map API 'type' to component 'projectType'
+        projectType: mapProjectTypeFromApi(projectDataFetched.type),
+        teamSize: projectDataFetched.teamSize || "3-5",
+        rolesNeeded: projectDataFetched.rolesNeeded || [{ skill: "", count: 1 }],
+        skillSummary: projectDataFetched.skillSummary || "",
+        timeCommitment: projectDataFetched.timeCommitment || "part_time",
+        // Map API timeline to component timeline
+        timeline: mapTimelineFromApi(projectDataFetched.timeline),
+        // Map API compensation array to single value
+        compensation: mapCompensationFromApi(projectDataFetched.compensation),
+        otherCompensationDetail: projectDataFetched.otherCompensationDetail || "",
+        outcomes: projectDataFetched.outcomes || "",
+      })
+    }
+  }, [projectDataFetched])
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target
     setProjectData((prev) => ({ ...prev, [id]: value }))
   }
 
   const handleProjectTypeChange = (value: string) => {
-    setProjectData((prev) => ({ ...prev, type: value }))
+    setProjectData((prev) => ({ ...prev, projectType: value }))
   }
 
   const handleRadioChange = (name: string, value: string) => {
@@ -73,31 +140,75 @@ export default function CreateProjectPage() {
     setProjectData({ ...projectData, rolesNeeded: updatedRoles });
   };
 
+  // Function to map component data back to API format
+  const mapDataForApi = (data: typeof projectData) => {
+    const projectTypeMap: { [key: string]: string } = {
+      "personal": "personal_project",
+      "startup": "startup",
+      "open-source": "open_source",
+      "social-impact": "social_impact"
+    }
 
-  const handleSubmit = async () => {
-    try {
-      const payload = {
-        ...projectData,
-      }
+    const timelineMap: { [key: string]: string } = {
+      "0-1": "Less than 1 month",
+      "1-3": "1-3 months",
+      "3-6": "3-6 months",
+      "6-12": "6-12 months",
+      "ongoing": "Ongoing"
+    }
 
-      await createProject(payload).unwrap()
-      toast("Project created successfully!");
-      router.push(`/projects`);
-    } catch (error: any) {
-      toast("Failed to create project")
+    const compensationMap: { [key: string]: string[] } = {
+      "equity": ["equity"],
+      "portfolio": ["portfolio"],
+      "future": ["future_paid"],
+      "other": ["other"]
+    }
+
+    return {
+      ...data,
+      type: projectTypeMap[data.projectType] || "startup",
+      timeline: timelineMap[data.timeline] || "3-6 months",
+      compensation: compensationMap[data.compensation] || ["equity"]
     }
   }
 
+const handleSubmit = async () => {
+  try {
+    // Map the component data to API format
+    const mappedData = mapDataForApi(projectData)
+    
+    const payload = {
+      id: projectId,
+      data: mappedData,  // Wrap mappedData in 'data' property
+    }
+
+    console.log("Payload being sent:", payload) // Debug log
+
+    await updateProject(payload).unwrap()
+    toast("Project updated successfully!");
+     router.push(`/projects`);
+  } catch (error: any) {
+    toast("Failed to update project")
+  }
+}
 
   const nextStep = () => setStep(step + 1)
   const prevStep = () => setStep(step - 1)
+
+  if (isFetchingProject) {
+    return <div className="container py-10 text-center">Loading project data...</div>
+  }
+
+  if (isProjectError) {
+    return <div className="container py-10 text-center text-red-500">Error loading project data.</div>
+  }
 
   return (
     <div className="container py-10">
       <div className="mx-auto max-w-3xl">
         <div className="flex flex-col space-y-2 text-center mb-8">
-          <h1 className="text-3xl font-bold">Create a New Project</h1>
-          <p className="text-muted-foreground">Share your vision and find the perfect team to bring it to life</p>
+          <h1 className="text-3xl font-bold">Edit Project</h1>
+          <p className="text-muted-foreground">Update your project details</p>
         </div>
 
         <div className="flex justify-between mb-8">
@@ -154,21 +265,21 @@ export default function CreateProjectPage() {
 
               <div className="space-y-2">
                 <Label>Project Type</Label>
-                <RadioGroup value={projectData.type} onValueChange={handleProjectTypeChange}>
+                <RadioGroup value={projectData.projectType} onValueChange={handleProjectTypeChange}>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="startup" id="startup" />
                     <Label htmlFor="startup">Startup / Business Venture</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="open_source" id="open_source" />
+                    <RadioGroupItem value="open-source" id="open-source" />
                     <Label htmlFor="open-source">Open Source Project</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="social_impact" id="social_impact" />
+                    <RadioGroupItem value="social-impact" id="social-impact" />
                     <Label htmlFor="social-impact">Social Impact / Non-profit</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="personal_project" id="personal_project" />
+                    <RadioGroupItem value="personal" id="personal" />
                     <Label htmlFor="personal">Personal / Side Project</Label>
                   </div>
                 </RadioGroup>
@@ -347,8 +458,8 @@ export default function CreateProjectPage() {
               <Button variant="outline" onClick={prevStep}>
                 Back
               </Button>
-              <Button onClick={handleSubmit} disabled={isLoading}>
-                {isLoading ? "Creating..." : "Create Project"}
+              <Button onClick={handleSubmit} disabled={isUpdatingProject}>
+                {isUpdatingProject ? "Updating..." : "Update Project"}
               </Button>
             </CardFooter>
           </Card>

@@ -1,202 +1,242 @@
 "use client"
 
+import { useState } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Progress } from "@/components/ui/progress"
-import { formatDistanceToNow } from "date-fns"
-import { MessageSquare, CheckCircle, XCircle, FileText, Download, ExternalLink } from "lucide-react"
+import { Mail, Calendar, MessageSquare, User, Briefcase } from "lucide-react"
+import { useUpdateApplicationStatusMutation } from "@/api/features/application/applicationSlice"
+import { toast } from "sonner"
+import { useGetApplicationsGroupedByProjectForFounderQuery } from "@/api/features/application/applicationSlice"
 
-interface Applicant {
-  id: string
-  applicantId: string
-  applicantName: string
-  applicantAvatar: string
-  applicantRole: string
-  applicantRating: string
-  projectId: string
-  projectTitle: string
-  status: "pending" | "accepted" | "rejected"
-  appliedDate: string
-  interests: string[]
-  skills: string[]
-  reliability: number
-  completedProjects: number
-  hasResume: boolean
-  education?: string
-  experience?: string
-  unreadMessages: number
-}
 
 interface ApplicantProfileProps {
-  applicant: Applicant
-  onMessageClick: () => void
-  onAccept: () => void
-  onReject: () => void
+  applicant: {
+    _id: string
+    applicant: {
+      _id: string
+      name: string
+      email: string
+      primaryRole?: string
+    }
+    role: string
+    status: string
+    message: string
+    createdAt: string
+    project: {
+      _id: string
+      title: string
+      description: string
+    }
+  }
+  onBack: () => void // ✅ this will be called after success (go back to project detail)
 }
 
-export function ApplicantProfile({ applicant, onMessageClick, onAccept, onReject }: ApplicantProfileProps) {
+export function ApplicantProfile({ applicant, onBack }: ApplicantProfileProps) {
+  const [showModal, setShowModal] = useState<"accepted" | "rejected" | null>(null)
+  const [updateApplicationStatus, { isLoading }] = useUpdateApplicationStatusMutation()
+  const { refetch } = useGetApplicationsGroupedByProjectForFounderQuery(undefined, {
+  skip: false, // don’t skip, we want to refresh the data
+});
+  
+
+  const getInitials = (name: string) =>
+    name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "accepted":
+        return "default"
+      case "pending":
+        return "secondary"
+      case "rejected":
+        return "destructive"
+      default:
+        return "secondary"
+    }
+  }
+
+  const handleConfirm = async () => {
+    if (!showModal) return
+    try {
+      await updateApplicationStatus({
+        id: applicant._id,
+        projectId: applicant.project._id,
+        status: showModal,
+      }).unwrap()
+      await refetch();
+      
+      toast.success(`Application ${showModal}`)
+      setShowModal(null)
+      onBack() // ✅ go back to project overview
+    } catch (err) {
+      toast.error("Failed to update application status")
+      console.error(err)
+    }
+  }
+
   return (
-    <Card className="h-[600px] flex flex-col">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-3">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={`/placeholder.svg?height=48&width=48&text=${applicant.applicantAvatar}`} />
-              <AvatarFallback>{applicant.applicantAvatar}</AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle className="text-xl">{applicant.applicantName}</CardTitle>
-              <div className="text-sm text-muted-foreground">
-                {applicant.applicantRole} • {applicant.applicantRating}
-              </div>
-            </div>
-          </div>
-          <Badge
-            variant={
-              applicant.status === "accepted" ? "success" : applicant.status === "rejected" ? "destructive" : "outline"
-            }
-            className="capitalize"
-          >
-            {applicant.status}
-          </Badge>
-        </div>
-        <div className="flex items-center space-x-1 text-sm text-muted-foreground mt-1">
-          <span>Applied to: {applicant.projectTitle}</span>
-          <span>•</span>
-          <span>{formatDistanceToNow(new Date(applicant.appliedDate), { addSuffix: true })}</span>
-        </div>
-      </CardHeader>
-
-      <ScrollArea className="flex-1 px-6">
-        <div className="space-y-6 pb-6">
-          <div>
-            <h3 className="text-lg font-medium mb-2">Applicant Summary</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Reliability Score</div>
-                <div className="flex items-center space-x-2">
-                  <Progress value={applicant.reliability} className="h-2" />
-                  <span
-                    className={`text-sm ${
-                      applicant.reliability >= 90
-                        ? "text-green-600"
-                        : applicant.reliability >= 80
-                          ? "text-amber-600"
-                          : "text-red-600"
-                    }`}
-                  >
-                    {applicant.reliability}%
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Completed Projects</div>
-                <div className="text-2xl font-bold">{applicant.completedProjects}</div>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div>
-            <h3 className="text-lg font-medium mb-2">Skills</h3>
-            <div className="flex flex-wrap gap-2">
-              {applicant.skills.map((skill, index) => (
-                <Badge key={index} variant="secondary">
-                  {skill}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          <Separator />
-
-          <div>
-            <h3 className="text-lg font-medium mb-2">Interests</h3>
-            <div className="flex flex-wrap gap-2">
-              {applicant.interests.map((interest, index) => (
-                <Badge key={index} variant="outline">
-                  {interest}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          <Separator />
-
-          <div>
-            <h3 className="text-lg font-medium mb-2">Education & Experience</h3>
-            {applicant.education && (
-              <div className="mb-2">
-                <div className="text-sm font-medium">Education</div>
-                <p className="text-sm">{applicant.education}</p>
-              </div>
-            )}
-            {applicant.experience && (
-              <div>
-                <div className="text-sm font-medium">Experience</div>
-                <p className="text-sm">{applicant.experience}</p>
-              </div>
-            )}
-          </div>
-
-          {applicant.hasResume && (
-            <>
-              <Separator />
-              <div>
-                <h3 className="text-lg font-medium mb-2">Resume</h3>
-                <div className="flex items-center space-x-2">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm">{applicant.applicantName}'s Resume.pdf</span>
-                  <Button variant="outline" size="sm" className="ml-auto">
-                    <Download className="h-4 w-4 mr-1" />
-                    Download
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-
-          <Separator />
-
-          <div>
-            <h3 className="text-lg font-medium mb-2">Portfolio</h3>
-            <Button variant="outline" size="sm" className="w-full">
-              <ExternalLink className="h-4 w-4 mr-1" />
-              View Portfolio
+    <>
+      {/* ✅ Confirmation Modal */}
+      <Dialog open={!!showModal} onOpenChange={() => setShowModal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Are you sure you want to {showModal} this application?
+            </DialogTitle>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setShowModal(null)}
+              variant="secondary"
+              disabled={isLoading}
+            >
+              Cancel
             </Button>
-          </div>
-        </div>
-      </ScrollArea>
+            <Button
+              onClick={handleConfirm}
+              variant={showModal === "rejected" ? "destructive" : "default"}
+              loading={isLoading}
+            >
+              {isLoading ? "Processing..." : `Yes, ${showModal}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <CardFooter className="border-t p-4 bg-muted/20">
-        <div className="flex w-full space-x-2">
+      {/* Applicant Profile UI */}
+      <Card className="flex flex-col">
+        <CardHeader className="pb-3">
+          <div className="flex items-start space-x-4">
+            <Avatar className="h-16 w-16">
+              <AvatarFallback className="text-lg">
+                {getInitials(applicant.applicant.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <CardTitle className="text-xl">{applicant.applicant.name}</CardTitle>
+              <CardDescription className="flex items-center gap-2 mt-1">
+                <Mail className="h-4 w-4" />
+                {applicant.applicant.email}
+              </CardDescription>
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant={getStatusColor(applicant.status)}>
+                  {applicant.status}
+                </Badge>
+                <Badge variant="outline">
+                  Applied for: {applicant.role}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full pr-4">
+            <div className="space-y-6">
+              {/* Project Info */}
+              <div>
+                <h3 className="flex items-center gap-2 text-lg font-medium mb-3">
+                  <Briefcase className="h-5 w-5" />
+                  Project Details
+                </h3>
+                <Card className="p-4">
+                  <h4 className="font-medium">{applicant.project.title}</h4>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {applicant.project.description}
+                  </p>
+                </Card>
+              </div>
+
+              <Separator />
+
+              {applicant.applicant.primaryRole && (
+                <>
+                  <div>
+                    <h3 className="flex items-center gap-2 text-lg font-medium mb-3">
+                      <User className="h-5 w-5" />
+                      Primary Role
+                    </h3>
+                    <p className="text-muted-foreground">{applicant.applicant.primaryRole}</p>
+                  </div>
+                  <Separator />
+                </>
+              )}
+
+              {applicant.message && (
+                <>
+                  <div>
+                    <h3 className="flex items-center gap-2 text-lg font-medium mb-3">
+                      <MessageSquare className="h-5 w-5" />
+                      Application Message
+                    </h3>
+                    <Card className="p-4">
+                      <p className="text-sm whitespace-pre-line">
+                        {applicant.message}
+                      </p>
+                    </Card>
+                  </div>
+                  <Separator />
+                </>
+              )}
+
+              <div>
+                <h3 className="flex items-center gap-2 text-lg font-medium mb-3">
+                  <Calendar className="h-5 w-5" />
+                  Application Date
+                </h3>
+                <p className="text-muted-foreground">
+                  {new Date(applicant.createdAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+            </div>
+          </ScrollArea>
+
           {applicant.status === "pending" && (
-            <>
-              <Button variant="outline" className="flex-1" onClick={onReject}>
-                <XCircle className="h-4 w-4 mr-1" />
-                Reject
-              </Button>
-              <Button className="flex-1" onClick={onAccept}>
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Accept
-              </Button>
-            </>
+            <div className="pt-4 border-t mt-4">
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setShowModal("accepted")}
+                  className="flex-1"
+                  size="lg"
+                  disabled={isLoading}
+                >
+                  Accept Application
+                </Button>
+                <Button
+                  onClick={() => setShowModal("rejected")}
+                  variant="destructive"
+                  className="flex-1"
+                  size="lg"
+                  disabled={isLoading}
+                >
+                  Reject Application
+                </Button>
+              </div>
+            </div>
           )}
-          <Button
-            variant={applicant.status === "pending" ? "outline" : "default"}
-            className={applicant.status === "pending" ? "w-auto" : "flex-1"}
-            onClick={onMessageClick}
-          >
-            <MessageSquare className="h-4 w-4 mr-1" />
-            Message
-          </Button>
-        </div>
-      </CardFooter>
-    </Card>
+        </CardContent>
+      </Card>
+    </>
   )
 }

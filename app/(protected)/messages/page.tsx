@@ -1,293 +1,165 @@
 "use client"
 
 import { AvatarFallback } from "@/components/ui/avatar"
-
 import { Avatar } from "@/components/ui/avatar"
-
 import { useState } from "react"
-// import { useAuth } from "@/context/auth-context"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Search, Filter, Users } from "lucide-react"
+import { Search, Filter, Users, Loader2 } from "lucide-react"
 import { ProjectApplicationsList } from "@/components/project-applications-list"
-import { MessagesList } from "@/components/messages-list"
-import { ConversationPanel } from "@/components/conversation-panel"
 import { ApplicantProfile } from "@/components/applicant-profile"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "@/components/ui/use-toast"
 import { Separator } from "@/components/ui/separator"
+import { useEffect } from "react"
+import { useGetMyApplicationsQuery, useGetApplicationsGroupedByProjectForFounderQuery } from "@/api/features/application/applicationSlice"
 
-export default function MessagesPage() {
-  // const { user } = useAuth()
-  const isFounder = true;
-  const [activeTab, setActiveTab] = useState("applications")
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
+export default function ApplicationsPage() {
+  const [user, setUser] = useState<any>(null);
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setIsClient(true)
+  }, []);
+
+  const isFounder = user?.role === "founder";
   const [selectedApplicant, setSelectedApplicant] = useState<string | null>(null)
+  const [selectedUserApplication, setSelectedUserApplication] = useState<any | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
 
-  // Mock data for founder's projects
-  const founderProjects = [
-    {
-      id: "proj1",
-      title: "AI-Powered Health Tracking App",
-      description: "A revolutionary health tracking app that uses AI to provide personalized recommendations.",
-      requiredRoles: [
-        { role: "UI/UX Designer", count: 1, filled: 1 },
-        { role: "React Native Developer", count: 2, filled: 1 },
-        { role: "Backend Developer", count: 1, filled: 0 },
-      ],
-      applicantsCount: 3,
-    },
-    {
-      id: "proj2",
-      title: "E-commerce Platform for Local Artisans",
-      description: "A marketplace to connect local artisans with customers worldwide.",
-      requiredRoles: [
-        { role: "Full Stack Developer", count: 2, filled: 0 },
-        { role: "UI/UX Designer", count: 1, filled: 0 },
-      ],
-      applicantsCount: 1,
-    },
-  ]
+  const { data: myApplications, isLoading: isLoadingMyApplications, error: myApplicationsError } = useGetMyApplicationsQuery(undefined, { skip: isFounder });
+  const { data: founderProjectsData, isLoading: isLoadingFounderProjects, error: founderProjectsError } = useGetApplicationsGroupedByProjectForFounderQuery(undefined, { skip: !isFounder });
 
-  // Mock data for applications
-  const applications = [
-    {
-      id: "app1",
-      applicantId: "user1",
-      applicantName: "Sarah Chen",
-      applicantAvatar: "SC",
-      applicantRole: "UI/UX Designer",
-      applicantRating: "4.9",
-      projectId: "proj1",
-      projectTitle: "AI-Powered Health Tracking App",
-      status: "accepted",
-      appliedDate: "2023-05-20",
-      interests: ["UI/UX Design", "Healthcare", "Mobile Apps", "Accessibility"],
-      skills: ["UI/UX Design", "Figma", "User Research", "Prototyping"],
-      reliability: 95,
-      completedProjects: 7,
-      hasResume: true,
-      education: "BFA in Graphic Design, Rhode Island School of Design",
-      experience: "5+ years in UI/UX design for healthcare applications",
-      unreadMessages: 2,
-    },
-    {
-      id: "app2",
-      applicantId: "user2",
-      applicantName: "John Doe",
-      applicantAvatar: "JD",
-      applicantRole: "React Native Developer",
-      applicantRating: "4.7",
-      projectId: "proj1",
-      projectTitle: "AI-Powered Health Tracking App",
-      status: "accepted",
-      appliedDate: "2023-05-18",
-      interests: ["Mobile Development", "Healthcare", "AI/ML", "React Native"],
-      skills: ["React Native", "JavaScript", "TypeScript", "API Integration"],
-      reliability: 88,
-      completedProjects: 5,
-      hasResume: true,
-      education: "BS in Computer Science, MIT",
-      experience: "3 years developing mobile applications with React Native",
-      unreadMessages: 0,
-    },
-    {
-      id: "app3",
-      applicantId: "user3",
-      applicantName: "Rachel Kim",
-      applicantAvatar: "RK",
-      applicantRole: "Backend Developer",
-      applicantRating: "4.8",
-      projectId: "proj1",
-      projectTitle: "AI-Powered Health Tracking App",
-      status: "pending",
-      appliedDate: "2023-05-15",
-      interests: ["Backend Development", "API Design", "Database Architecture", "Security"],
-      skills: ["Node.js", "MongoDB", "API Design", "AWS"],
-      reliability: 92,
-      completedProjects: 8,
-      hasResume: true,
-      education: "MS in Computer Science, Stanford University",
-      experience: "6 years building secure and scalable backend systems",
-      unreadMessages: 0,
-    },
-    {
-      id: "app4",
-      applicantId: "user4",
-      applicantName: "Michael Johnson",
-      applicantAvatar: "MJ",
-      applicantRole: "Full Stack Developer",
-      applicantRating: "4.6",
-      projectId: "proj2",
-      projectTitle: "E-commerce Platform for Local Artisans",
-      status: "pending",
-      appliedDate: "2023-05-22",
-      interests: ["E-commerce", "Full Stack Development", "Payment Integration", "UX"],
-      skills: ["React", "Node.js", "MongoDB", "Stripe API"],
-      reliability: 85,
-      completedProjects: 4,
-      hasResume: true,
-      unreadMessages: 1,
-    },
-  ]
+  const founderProjects = founderProjectsData || [];
 
-  // Mock data for tech creative applications (if user is a tech creative)
-  const myApplications = [
-    {
-      id: "app5",
-      founderId: "founder1",
-      founderName: "Alex Johnson",
-      founderAvatar: "AJ",
-      founderRole: "Founder & Healthcare Technologist",
-      founderRating: "4.8",
-      projectId: "proj1",
-      projectTitle: "AI-Powered Health Tracking App",
-      status: "accepted",
-      appliedDate: "2023-05-17",
-      interests: ["Healthcare", "AI/ML", "Mobile Apps"],
-      skills: ["React Native", "Mobile Development"],
-      reliability: 90,
-      completedProjects: 3,
-      hasResume: true,
-      unreadMessages: 3,
-    },
-    {
-      id: "app6",
-      founderId: "founder2",
-      founderName: "Emily Taylor",
-      founderAvatar: "ET",
-      founderRole: "Founder & Environmental Advocate",
-      founderRating: "4.7",
-      projectId: "proj3",
-      projectTitle: "Environmental Impact Tracking Dashboard",
-      status: "pending",
-      appliedDate: "2023-05-21",
-      interests: ["Environment", "Data Visualization", "Sustainability"],
-      skills: ["React", "D3.js", "Data Visualization"],
-      reliability: 90,
-      completedProjects: 3,
-      hasResume: true,
-      unreadMessages: 0,
-    },
-  ]
+  console.log(founderProjects)
 
-  // Mock data for messages/conversations
-  const conversations = [
-    {
-      id: "conv1",
-      withUserId: "user1",
-      withUserName: "Sarah Chen",
-      withUserAvatar: "SC",
-      withUserRole: "UI/UX Designer",
-      projectId: "proj1",
-      projectTitle: "AI-Powered Health Tracking App",
-      lastMessage: "I've uploaded the wireframes for the dashboard. Let me know what you think!",
-      lastMessageTime: "2023-05-22T14:30:00",
-      unread: 2,
-    },
-    {
-      id: "conv2",
-      withUserId: "user2",
-      withUserName: "John Doe",
-      withUserAvatar: "JD",
-      withUserRole: "React Native Developer",
-      projectId: "proj1",
-      projectTitle: "AI-Powered Health Tracking App",
-      lastMessage: "I've started working on the authentication flow. Should be done by tomorrow.",
-      lastMessageTime: "2023-05-21T18:45:00",
-      unread: 0,
-    },
-    {
-      id: "conv3",
-      withUserId: "founder1",
-      withUserName: "Alex Johnson",
-      withUserAvatar: "AJ",
-      withUserRole: "Founder & Healthcare Technologist",
-      projectId: "proj1",
-      projectTitle: "AI-Powered Health Tracking App",
-      lastMessage: "Great work on the login screen! Can you add biometric authentication as well?",
-      lastMessageTime: "2023-05-22T09:15:00",
-      unread: 3,
-    },
-  ]
-
-  // Filter applications based on search query and filters
-  const filteredApplications = (isFounder ? applications : myApplications).filter((app) => {
-    const matchesSearch =
-      app.projectTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (isFounder ? app.applicantName : app.founderName).toLowerCase().includes(searchQuery.toLowerCase())
+  // Fixed filtering logic to match actual data structure
+  const filteredApplications = myApplications?.filter((app: any) => {
+    const matchesSearch = isFounder
+      ? (app.applicant?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.project?.title?.toLowerCase().includes(searchQuery.toLowerCase()))
+      : (app.project?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.applicant?.name?.toLowerCase().includes(searchQuery.toLowerCase()))
 
     const matchesStatus = statusFilter === "all" || app.status === statusFilter
-    const matchesProject = selectedProject ? app.projectId === selectedProject : true
+    const matchesProject = selectedProject ? app.project?._id === selectedProject : true
 
     return matchesSearch && matchesStatus && matchesProject
-  })
+  }) || []
 
-  // Group applications by project
-  const applicationsByProject = filteredApplications.reduce(
-    (acc, app) => {
-      if (!acc[app.projectId]) {
-        acc[app.projectId] = {
-          projectId: app.projectId,
-          projectTitle: app.projectTitle,
-          applications: [],
-        }
-      }
-      acc[app.projectId].applications.push(app)
-      return acc
-    },
-    {} as Record<string, { projectId: string; projectTitle: string; applications: typeof filteredApplications }>,
+  // Fixed: Get the selected applicant data correctly
+  const selectedApplicantData = selectedProject && selectedApplicant
+    ? founderProjects
+      .find((p: any) => p.project._id === selectedProject)
+      ?.applications.find((app: any) => app._id === selectedApplicant)
+    : null
+
+  const selectedProjectData = founderProjects.find(
+    (item: any) => item.project._id === selectedProject
   )
 
-  // Filter conversations based on search query
-  const filteredConversations = conversations.filter((conv) =>
-    conv.withUserName.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
-
-  // Find selected applicant
-  const selectedApplicantData = applications.find((app) => app.id === selectedApplicant)
-
-  // Find selected project
-  const selectedProjectData = founderProjects.find((project) => project.id === selectedProject)
-
-  // Calculate remaining slots for the selected project
-  const getRemainingSlots = (project: (typeof founderProjects)[0]) => {
-    const totalRequired = project.requiredRoles.reduce((sum, role) => sum + role.count, 0)
-    const totalFilled = project.requiredRoles.reduce((sum, role) => sum + role.filled, 0)
-    return totalRequired - totalFilled
-  }
+  console.log(selectedProjectData)
 
   // Get accepted applicants for a project
-  const getAcceptedApplicants = (projectId: string) => {
-    return applications.filter((app) => app.projectId === projectId && app.status === "accepted")
+  const getAcceptedApplicants = () => {
+    if (!selectedProjectData || !selectedProjectData.applications) return []
+    return selectedProjectData.applications.filter((app: any) => app.status === "accepted")
   }
 
-  // Get pending applicants for a project
-  const getPendingApplicants = (projectId: string) => {
-    return applications.filter((app) => app.projectId === projectId && app.status === "pending")
+  const getPendingApplicants = () => {
+    if (!selectedProjectData || !selectedProjectData.applications) return []
+    return selectedProjectData.applications.filter((app: any) => app.status === "pending")
+  }
+
+  const handleBackToProjects = () => {
+    setSelectedProject(null)
+    setSelectedApplicant(null)
+  }
+
+  const handleBackToApplications = () => {
+    setSelectedUserApplication(null)
+  }
+
+  const handleBackToApplicationsList = () => {
+    setSelectedApplicant(null)
+  }
+
+  // Handle accept/reject actions
+  const handleAcceptApplication = async () => {
+    if (!selectedApplicantData) return
+
+    try {
+      // TODO: Add your API call here to accept the application
+      // await acceptApplication(selectedApplicantData._id)
+
+      toast({
+        title: "Application Accepted",
+        description: `You have accepted ${selectedApplicantData.applicant.name}'s application.`,
+      })
+
+      // Reset selection and refetch data
+      setSelectedApplicant(null)
+      // You might want to refetch the data here
+
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to accept application. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleRejectApplication = async () => {
+    if (!selectedApplicantData) return
+
+    try {
+      // TODO: Add your API call here to reject the application
+      // await rejectApplication(selectedApplicantData._id)
+
+      toast({
+        title: "Application Rejected",
+        description: `You have rejected ${selectedApplicantData.applicant.name}'s application.`,
+      })
+
+      // Reset selection and refetch data
+      setSelectedApplicant(null)
+      // You might want to refetch the data here
+
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject application. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   return (
     <div className="container py-10">
       <div className="flex flex-col space-y-2 mb-6">
-        <h1 className="text-3xl font-bold">Messages & Applications</h1>
+        <h1 className="text-3xl font-bold">Applications</h1>
         <p className="text-muted-foreground">
           {isFounder
-            ? "Manage project applications and communicate with potential team members"
-            : "Track your applications and communicate with project founders"}
+            ? "Manage project applications and review potential team members"
+            : "Track your applications and view application details"}
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 space-y-4">
+          {/* Search and Filter */}
           <div className="flex items-center space-x-2">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -324,109 +196,176 @@ export default function MessagesPage() {
             </DropdownMenu>
           </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="applications">
-                Applications
-                <Badge variant="secondary" className="ml-2">
-                  {(isFounder ? applications : myApplications).filter((app) => app.status === "pending").length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="messages">
-                Messages
-                <Badge variant="secondary" className="ml-2">
-                  {conversations.reduce((count, conv) => count + conv.unread, 0)}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
+          {/* Back button when viewing applicant profile */}
+          {selectedApplicant && (
+            <Button
+              variant="outline"
+              onClick={handleBackToApplicationsList}
+              className="w-full"
+            >
+              ← Back to Applications
+            </Button>
+          )}
 
-            <TabsContent value="applications" className="mt-4 space-y-4">
-              {isFounder ? (
-                <ScrollArea className="h-[600px] pr-4">
-                  <div className="space-y-4">
-                    {founderProjects.map((project) => (
+          {/* Back button when viewing project applications */}
+          {selectedProject && !selectedApplicant && (
+            <Button
+              variant="outline"
+              onClick={handleBackToProjects}
+              className="w-full"
+            >
+              ← Back to Projects
+            </Button>
+          )}
+
+          {/* Back button when viewing application details */}
+          {selectedUserApplication && (
+            <Button
+              variant="outline"
+              onClick={handleBackToApplications}
+              className="w-full"
+            >
+              ← Back to Applications
+            </Button>
+          )}
+
+          {/* List Content */}
+          <ScrollArea className="h-[600px] pr-4">
+            <div className="space-y-4">
+              {isClient && isFounder ? (
+                // Founder view: Show projects if no project selected, otherwise show applications for selected project
+                selectedProject ? (
+                  getPendingApplicants().length > 0 ? (
+                    <div className="space-y-3">
+                      {getPendingApplicants().map((application: any) => (
+                        <Card
+                          key={application._id}
+                          className={`cursor-pointer hover:bg-muted/50 transition-colors ${selectedApplicant === application._id ? "border-primary" : ""
+                            }`}
+                          onClick={() => setSelectedApplicant(application._id)}
+                        >
+                          <CardHeader className="p-4">
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarFallback>
+                                  {application.applicant.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1">
+                                <CardTitle className="text-lg">{application.applicant.name}</CardTitle>
+                                <CardDescription className="text-sm">
+                                  Applied for: {application.role}
+                                </CardDescription>
+                              </div>
+                              <Badge variant="secondary">{application.status}</Badge>
+                            </div>
+                          </CardHeader>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center text-muted-foreground py-8">
+                      <p>No pending applications for this project.</p>
+                    </div>
+                  )
+                ) : (
+                  // Show projects list
+                  founderProjects.map(({ project, applications }: any) => {
+                   const applicantsCount = applications.filter((app: any) => app.status === "pending").length;
+
+
+                    return (
                       <Card
-                        key={project.id}
-                        className={`cursor-pointer hover:bg-muted/50 ${selectedProject === project.id ? "border-primary" : ""}`}
-                        onClick={() => setSelectedProject(project.id)}
+                        key={project._id}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => setSelectedProject(project._id)}
                       >
                         <CardHeader className="p-4">
                           <div className="flex items-center justify-between">
                             <CardTitle className="text-lg">{project.title}</CardTitle>
                             <Badge variant="secondary">
-                              {project.applicantsCount} {project.applicantsCount === 1 ? "Applicant" : "Applicants"}
+                              {applicantsCount} {applicantsCount === 1 ? "Applicant" : "Applicants"}
                             </Badge>
                           </div>
                         </CardHeader>
                       </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
+                    );
+                  })
+                )
+              ) : isClient && isLoadingMyApplications ? (
+                <div className="flex items-center justify-center h-[400px]">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : isClient && myApplications && myApplications.length > 0 ? (
+                // Non-founder view: Show applications
+                filteredApplications.map((application: any) => (
+                  <Card
+                    key={application._id}
+                    className={`cursor-pointer hover:bg-muted/50 transition-colors ${selectedUserApplication && selectedUserApplication._id === application._id ? "border-primary" : ""
+                      }`}
+                    onClick={() => setSelectedUserApplication(application)}
+                  >
+                    <CardHeader className="p-4">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">{application.project?.title}</CardTitle>
+                        <Badge
+                          variant={application.status === "accepted" ? "default" :
+                            application.status === "pending" ? "secondary" : "destructive"}
+                        >
+                          {application.status}
+                        </Badge>
+                      </div>
+                      <CardDescription className="text-sm">
+                        Applied: {new Date(application.createdAt).toLocaleDateString()}
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                ))
+              ) : isClient && myApplicationsError ? (
+                <div className="text-center text-muted-foreground py-8">
+                  <p>Error loading your applications.</p>
+                </div>
               ) : (
-                <div className="space-y-4">
-                  {Object.values(applicationsByProject).map((projectGroup) => (
-                    <div key={projectGroup.projectId}>
-                      <h3 className="text-lg font-medium mb-2">{projectGroup.projectTitle}</h3>
-                      <ProjectApplicationsList
-                        applications={projectGroup.applications}
-                        isFounder={false}
-                        onSelect={(id) => {
-                          setSelectedConversation(id)
-                          setSelectedApplicant(null)
-                          // On mobile, we might want to switch to the conversation panel
-                          if (window.innerWidth < 1024) {
-                            document.getElementById("conversation-panel")?.scrollIntoView({ behavior: "smooth" })
-                          }
-                        }}
-                        selectedId={selectedConversation}
-                      />
-                    </div>
-                  ))}
+                <div className="text-center text-muted-foreground py-8">
+                  <p>No applications found.</p>
                 </div>
               )}
-            </TabsContent>
-
-            <TabsContent value="messages" className="mt-4 space-y-4">
-              <MessagesList
-                conversations={filteredConversations}
-                onSelect={(id) => {
-                  setSelectedConversation(id)
-                  setSelectedApplicant(null)
-                  // On mobile, we might want to switch to the conversation panel
-                  if (window.innerWidth < 1024) {
-                    document.getElementById("conversation-panel")?.scrollIntoView({ behavior: "smooth" })
-                  }
-                }}
-                selectedId={selectedConversation}
-              />
-            </TabsContent>
-          </Tabs>
+            </div>
+          </ScrollArea>
         </div>
 
-        <div id="applicant-panel" className="lg:col-span-2">
-          {selectedProject && isFounder ? (
-            <Card className="h-[600px] flex flex-col">
+        {/* Right Panel */}
+        <div className="lg:col-span-2">
+          {selectedApplicant && selectedApplicantData && isFounder ? (
+            // Founder: Show applicant profile
+            <ApplicantProfile
+              applicant={selectedApplicantData}
+              onBack={handleBackToApplicationsList}
+            />
+          ) : selectedProject && isFounder ? (
+            // Founder: Show project overview
+            <Card className="h-[600px] flex flex-col ">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="text-xl">{selectedProjectData?.title}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">{selectedProjectData?.description}</p>
+                    <CardTitle className="text-xl">{selectedProjectData?.project.title}</CardTitle>
+                    <CardDescription className="mt-2">{selectedProjectData?.project.description}</CardDescription>
                   </div>
                 </div>
               </CardHeader>
 
-              <CardContent className="flex-1 overflow-hidden">
+              <CardContent className="flex-1 overflow-hidden mt-[30px]">
                 <ScrollArea className="h-full pr-4">
                   <div className="space-y-6">
                     {/* Team Composition Section */}
                     <div>
                       <h3 className="text-lg font-medium mb-3">Team Composition</h3>
-                      <div className="grid grid-cols-3 gap-4 mb-4">
-                        {selectedProjectData?.requiredRoles.map((role, index) => (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                        {selectedProjectData?.project.rolesNeeded?.map((role: any, index: number) => (
                           <Card key={index} className="p-3">
-                            <div className="font-medium">{role.role}</div>
+                            <div className="font-medium">{role.skill}</div>
                             <div className="text-sm text-muted-foreground">
-                              {role.filled}/{role.count} filled
+                              {role.filled || 0}/{role.count} filled
                             </div>
                           </Card>
                         ))}
@@ -436,46 +375,32 @@ export default function MessagesPage() {
                           <Users className="h-5 w-5 mr-2 text-muted-foreground" />
                           <span className="font-medium">Remaining Positions:</span>
                         </div>
-                        <Badge variant={getRemainingSlots(selectedProjectData!) > 0 ? "outline" : "secondary"}>
-                          {getRemainingSlots(selectedProjectData!)}
+                        <Badge variant={selectedProjectData?.project.remainingSlots > 0 ? "outline" : "secondary"}>
+                          {selectedProjectData?.project.remainingSlots || 0}
                         </Badge>
                       </div>
                     </div>
 
                     <Separator />
 
-                    {/* Accepted Applicants Section */}
+                    {/* Accepted Team Members Section */}
                     <div>
                       <h3 className="text-lg font-medium mb-3">Accepted Team Members</h3>
-                      {getAcceptedApplicants(selectedProject).length > 0 ? (
+                      {getAcceptedApplicants().length > 0 ? (
                         <div className="space-y-3">
-                          {getAcceptedApplicants(selectedProject).map((applicant) => (
-                            <Card key={applicant.id} className="p-3">
+                          {getAcceptedApplicants().map((applicant: any) => (
+                            <Card key={applicant._id} className="p-3">
                               <div className="flex items-center space-x-3">
                                 <Avatar className="h-10 w-10">
-                                  <AvatarFallback>{applicant.applicantAvatar}</AvatarFallback>
+                                  <AvatarFallback>
+                                    {applicant.applicant.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                                  </AvatarFallback>
                                 </Avatar>
-                                <div>
-                                  <div className="font-medium">{applicant.applicantName}</div>
-                                  <div className="text-sm text-muted-foreground">{applicant.applicantRole}</div>
+                                <div className="flex-1">
+                                  <div className="font-medium">{applicant.applicant.name}</div>
+                                  <div className="text-sm text-muted-foreground">{applicant.role}</div>
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="ml-auto"
-                                  onClick={() => {
-                                    // Find the conversation with this applicant
-                                    const conversation = conversations.find(
-                                      (c) => c.withUserId === applicant.applicantId,
-                                    )
-                                    if (conversation) {
-                                      setSelectedConversation(conversation.id)
-                                      setSelectedApplicant(null)
-                                    }
-                                  }}
-                                >
-                                  Message
-                                </Button>
+                                <Badge variant="default">Accepted</Badge>
                               </div>
                             </Card>
                           ))}
@@ -487,68 +412,86 @@ export default function MessagesPage() {
 
                     <Separator />
 
-                    {/* Pending Applicants Section */}
+                    {/* Pending Applications Info */}
                     <div>
                       <h3 className="text-lg font-medium mb-3">Pending Applications</h3>
-                      {getPendingApplicants(selectedProject).length > 0 ? (
-                        <div className="space-y-3">
-                          <ProjectApplicationsList
-                            applications={getPendingApplicants(selectedProject)}
-                            onSelect={(id) => {
-                              setSelectedApplicant(id)
-                              setSelectedProject(null)
-                            }}
-                            selectedId={selectedApplicant}
-                          />
-                        </div>
-                      ) : (
-                        <p className="text-muted-foreground">No pending applications.</p>
-                      )}
+                      <p className="text-muted-foreground">
+                        {getPendingApplicants().length} pending applications.
+                        Select an applicant from the left panel to review their profile.
+                      </p>
                     </div>
                   </div>
                 </ScrollArea>
               </CardContent>
             </Card>
-          ) : selectedApplicant && selectedApplicantData ? (
-            <ApplicantProfile
-              applicant={selectedApplicantData}
-              onMessageClick={() => {
-                // Find the conversation with this applicant
-                const conversation = conversations.find((c) => c.withUserId === selectedApplicantData.applicantId)
-                if (conversation) {
-                  setSelectedConversation(conversation.id)
-                  setSelectedApplicant(null)
-                }
-              }}
-              onAccept={() => {
-                // In a real app, you would call an API to update the application status
-                toast({
-                  title: "Application Accepted",
-                  description: `You have accepted ${selectedApplicantData.applicantName}'s application.`,
-                })
-              }}
-              onReject={() => {
-                // In a real app, you would call an API to update the application status
-                toast({
-                  title: "Application Rejected",
-                  description: `You have rejected ${selectedApplicantData.applicantName}'s application.`,
-                })
-              }}
-            />
-          ) : selectedConversation ? (
-            <ConversationPanel
-              conversationId={selectedConversation}
-              isFounder={isFounder}
-              applications={isFounder ? applications : myApplications}
-              conversations={conversations}
-            />
+          ) : selectedUserApplication ? (
+            // Non-founder: Show application details
+            <Card className="flex flex-col">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl">{selectedUserApplication.project?.title}</CardTitle>
+                <CardDescription>
+                  Status: <Badge variant={selectedUserApplication.status === "accepted" ? "default" :
+                    selectedUserApplication.status === "pending" ? "secondary" : "destructive"}>
+                    {selectedUserApplication.status}
+                  </Badge>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full pr-4">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-medium mb-2">Project Description:</h3>
+                      <p className="text-muted-foreground">{selectedUserApplication.project?.description}</p>
+                    </div>
+                    <Separator />
+                    <div>
+                      <h3 className="font-medium mb-2">Role Applied For:</h3>
+                      <p>{selectedUserApplication.role}</p>
+                    </div>
+                    {selectedUserApplication.message && (
+                      <>
+                        <Separator />
+                        <div>
+                          <h3 className="font-medium mb-2">Your Message:</h3>
+                          <p className="whitespace-pre-line text-muted-foreground">{selectedUserApplication.message}</p>
+                        </div>
+                      </>
+                    )}
+                    <Separator />
+                    <div>
+                      <h3 className="font-medium mb-2">Application Date:</h3>
+                      <p>{new Date(selectedUserApplication.createdAt).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </ScrollArea>
+                {selectedUserApplication.status === "pending" && (
+                  <div className="pt-4 border-t">
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      onClick={() => {
+                        toast({
+                          title: "Application Cancelled",
+                          description: `You have cancelled your application for ${selectedUserApplication.project?.title}.`,
+                        })
+                        // In a real app, you would call an API to cancel the application
+                        // and then update the local state or refetch the data
+                      }}
+                    >
+                      Cancel Application
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           ) : (
+            // Empty state
             <Card className="h-[600px] flex items-center justify-center">
               <CardContent className="text-center">
                 <p className="text-muted-foreground">
                   {isFounder
-                    ? "Select a project to view applications or a conversation to start messaging"
-                    : "Select a conversation to start messaging"}
+                    ? "Select a project to view its applications and team composition"
+                    : "Select an application to view its details"}
                 </p>
               </CardContent>
             </Card>

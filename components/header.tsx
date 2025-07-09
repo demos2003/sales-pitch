@@ -2,7 +2,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "./mode-toggle"
 import { Menu, X, User, LogOut, Settings, PlusCircle } from "lucide-react"
@@ -17,11 +17,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useDispatch, useSelector } from "react-redux"
+import { logout } from "@/api/features/auth/authSlice"
+import { RootState } from "@/api/store"
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const pathname = usePathname()
-  // const { user, logout, isFounder } = useAuth()
+  const dispatch = useDispatch()
+  const user = useSelector((state: RootState) => state.auth.user)
 
   const publicNavigation = [
     { name: "Home", href: "/" },
@@ -33,27 +37,17 @@ export default function Header() {
   const privateNavigation = [
     { name: "Dashboard", href: "/dashboard" },
     { name: "Projects", href: "/projects" },
-    { name: "Messages", href: "/messages" },
+    { name: "Applications", href: "/messages" },
   ]
 
-  const [user, setUser] = useState<any>(null);
+  const isFounder = user?.role === "founder"
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
+  const navigation = user ? privateNavigation : publicNavigation
 
-  const isFounder = user?.role === "founder";
-
-  const navigation = user ? privateNavigation : publicNavigation;
-
-  const logout = () => {
-    localStorage.removeItem("user")
-    window.location.href = "/auth";
+  const handleLogout = () => {
+    dispatch(logout())
+    window.location.href = "/auth"
   }
-
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -71,8 +65,9 @@ export default function Header() {
             <Link
               key={item.name}
               href={item.href}
-              className={`text-sm font-medium transition-colors hover:text-primary ${pathname === item.href ? "text-primary" : "text-muted-foreground"
-                }`}
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                pathname === item.href ? "text-primary" : "text-muted-foreground"
+              }`}
             >
               {item.name}
             </Link>
@@ -115,9 +110,7 @@ export default function Header() {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={logout}
-                >
+                <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>
@@ -154,8 +147,9 @@ export default function Header() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`text-sm font-medium transition-colors hover:text-primary ${pathname === item.href ? "text-primary" : "text-muted-foreground"
-                  }`}
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  pathname === item.href ? "text-primary" : "text-muted-foreground"
+                }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 {item.name}
@@ -188,7 +182,7 @@ export default function Header() {
                   variant="outline"
                   className="w-full flex items-center justify-start"
                   onClick={() => {
-                    // logout()
+                    handleLogout()
                     setIsMenuOpen(false)
                   }}
                 >

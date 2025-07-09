@@ -1,59 +1,24 @@
+'use client'
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter } from "lucide-react"
+import { Search, Filter, Loader2 } from "lucide-react"
+import { useGetAllProjectsQuery, setSelectedProject } from "@/api/features/projects/projectsSlice"
+import { useDispatch } from "react-redux"
+
 
 export default function ProjectsPage() {
-  // Sample project data
-  const projects = [
-    {
-      id: 1,
-      title: "AI-Powered Health Tracking App",
-      description:
-        "Looking for developers and designers to build a health tracking app that uses AI to provide personalized recommendations.",
-      founder: "Alex Johnson",
-      founderRating: "4.8",
-      skills: ["React Native", "AI/ML", "UI/UX Design"],
-      type: "Startup",
-      timeline: "3-6 months",
-    },
-    {
-      id: 2,
-      title: "E-commerce Platform for Local Artisans",
-      description:
-        "Building a marketplace to connect local artisans with customers. Need full-stack developers and a product manager.",
-      founder: "Sarah Chen",
-      founderRating: "4.5",
-      skills: ["React", "Node.js", "Product Management"],
-      type: "Startup",
-      timeline: "2-4 months",
-    },
-    {
-      id: 3,
-      title: "Open-Source Code Editor Extensions",
-      description:
-        "Creating a suite of productivity extensions for popular code editors. Looking for JavaScript developers.",
-      founder: "Michael Rodriguez",
-      founderRating: "4.9",
-      skills: ["JavaScript", "VS Code API", "Extension Development"],
-      type: "Open Source",
-      timeline: "Ongoing",
-    },
-    {
-      id: 4,
-      title: "Environmental Impact Tracking Dashboard",
-      description:
-        "Developing a dashboard to help businesses track and reduce their environmental impact. Need frontend developers and data visualization experts.",
-      founder: "Emily Taylor",
-      founderRating: "4.7",
-      skills: ["React", "D3.js", "Data Visualization"],
-      type: "Social Impact",
-      timeline: "2-3 months",
-    },
-  ]
+
+  const dispatch = useDispatch();
+  const { data: projects = [], isLoading, isError } = useGetAllProjectsQuery();
+
+  const handleViewProject = (project: any) => {
+    dispatch(setSelectedProject(project));
+  };
 
   return (
     <div className="container py-10">
@@ -88,48 +53,58 @@ export default function ProjectsPage() {
         <Button type="submit">Search</Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project) => (
-          <Card key={project.id} className="flex flex-col">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <CardTitle className="text-xl">{project.title}</CardTitle>
-                <Badge variant="outline">{project.type}</Badge>
-              </div>
-              <CardDescription>
-                <div className="flex items-center space-x-1">
-                  <span>By {project.founder}</span>
-                  <span>•</span>
-                  <span>PCA: {project.founderRating}</span>
+   {isLoading ? (
+        <div className="flex h-[40vh] w-full items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : isError ? (
+        <p className="text-red-500">Failed to load projects.</p>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {projects.map((project: any) => (
+            <Card key={project._id} className="flex flex-col">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <CardTitle className="text-xl">{project.title}</CardTitle>
+                  <Badge variant="outline">{project.type}</Badge>
                 </div>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1">
-              <p className="text-muted-foreground">{project.description}</p>
-              <div className="mt-4">
-                <p className="text-sm font-medium">Skills needed:</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {project.skills.map((skill, index) => (
-                    <Badge key={index} variant="secondary">
-                      {skill}
-                    </Badge>
-                  ))}
+                <CardDescription>
+                  <div className="flex items-center space-x-1">
+                    <span>By {project.founder.name}</span>
+                    <span>•</span>
+                    <span>PCA: 5.0</span>
+                  </div>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1">
+                <p className="text-muted-foreground">{project.description}</p>
+                <div className="mt-4">
+                  <p className="text-sm font-medium">Skills needed:</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {project.skillSummary.split(',').map((skill: string, index: number) => (
+                      <Badge key={index} variant="secondary">
+                        {skill.trim()}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="mt-4">
-                <p className="text-sm">
-                  <span className="font-medium">Timeline:</span> {project.timeline}
-                </p>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Link href={`/projects/${project.id}`} className="w-full">
-                <Button className="w-full">View Project</Button>
-              </Link>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+                <div className="mt-4">
+                  <p className="text-sm">
+                    <span className="font-medium">Timeline:</span> {project.timeline}
+                  </p>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Link href={`/projects/${project._id}`} className="w-full" onClick={() => handleViewProject(project)}>
+                  <Button className="w-full">View Project</Button>
+                </Link>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
+
     </div>
   )
 }
+

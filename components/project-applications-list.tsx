@@ -6,11 +6,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { formatDistanceToNow } from "date-fns"
 
 interface Application {
-  id: string
+  _id: string
   applicantId?: string
-  applicantName?: string
+  name?: string
   applicantAvatar?: string
-  applicantRole?: string
+  role?: string
   applicantRating?: string
   founderId?: string
   founderName?: string
@@ -20,7 +20,7 @@ interface Application {
   projectId: string
   projectTitle: string
   status: "pending" | "accepted" | "rejected"
-  appliedDate: string
+  createdAt: string
   interests: string[]
   skills: string[]
   reliability: number
@@ -57,24 +57,22 @@ export function ProjectApplicationsList({
       {applications.map((application) => (
         <Card
           key={application.id}
-          className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-            selectedId === application.id ? "border-primary" : ""
-          }`}
-          onClick={() => onSelect(application.id)}
+          className={`cursor-pointer transition-colors hover:bg-muted/50 ${selectedId === application._id ? "border-primary" : ""
+            }`}
+          onClick={() => onSelect(application._id)}
         >
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <Avatar className="h-10 w-10">
                 <AvatarImage
-                  src={`/placeholder.svg?height=40&width=40&text=${
-                    isFounder ? application.applicantAvatar : application.founderAvatar
-                  }`}
+                  src={`/placeholder.svg?height=40&width=40&text=${isFounder ? application.applicantAvatar : application.founderAvatar
+                    }`}
                 />
                 <AvatarFallback>{isFounder ? application.applicantAvatar : application.founderAvatar}</AvatarFallback>
               </Avatar>
               <div className="flex-1 space-y-1">
                 <div className="flex items-center justify-between">
-                  <div className="font-medium">{isFounder ? application.applicantName : application.founderName}</div>
+                  <div className="font-medium">{isFounder ? application?.applicant.name : application.founderName}</div>
                   <Badge
                     variant={
                       application.status === "accepted"
@@ -90,11 +88,15 @@ export function ProjectApplicationsList({
                 </div>
                 <div className="text-sm text-muted-foreground flex items-center justify-between">
                   <span>
-                    {isFounder ? application.applicantRole : application.founderRole} •{" "}
-                    {isFounder ? application.applicantRating : application.founderRating}
+                    {isFounder ? application.role : application.founderRole}
                   </span>
                   <span className="text-xs">
-                    {formatDistanceToNow(new Date(application.appliedDate), { addSuffix: true })}
+                    {application.createdAt ? (
+                      formatDistanceToNow(new Date(application.createdAt), { addSuffix: true })
+                    ) : (
+                      "N/A"
+                    )}
+
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -109,15 +111,16 @@ export function ProjectApplicationsList({
                             : "text-red-600"
                       }
                     >
-                      {application.reliability}%
+                      90%
                     </span>
                   </div>
                   <div>
                     <span className="font-medium mr-1">Projects:</span>
-                    <span>{application.completedProjects}</span>
+                    {/* <span>{application.completedProjects}</span> */}
+                    <span>0</span>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1 mt-1">
+                {/* <div className="flex flex-wrap gap-1 mt-1">
                   {application.skills.slice(0, 3).map((skill, index) => (
                     <Badge key={index} variant="secondary" className="text-xs">
                       {skill}
@@ -128,14 +131,7 @@ export function ProjectApplicationsList({
                       +{application.skills.length - 3} more
                     </Badge>
                   )}
-                </div>
-                {application.unreadMessages > 0 && (
-                  <div className="flex justify-end">
-                    <Badge variant="default" className="text-xs">
-                      {application.unreadMessages} new {application.unreadMessages === 1 ? "message" : "messages"}
-                    </Badge>
-                  </div>
-                )}
+                </div> */}
               </div>
             </div>
           </CardContent>

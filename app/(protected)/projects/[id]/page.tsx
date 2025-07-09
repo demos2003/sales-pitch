@@ -6,68 +6,117 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Users, Clock, Award, Briefcase, Star, MessageSquare, Edit, UserPlus } from "lucide-react"
-// import { useAuth } from "@/context/auth-context"
-import {  useEffect, useState } from "react"
-import { toast } from "@/components/ui/use-toast"
+import { Calendar, Users, Clock, Award, Briefcase, Star, MessageSquare, Edit, Trash2, Loader2 } from "lucide-react"
+import { useGetProjectByIdQuery } from "@/api/features/projects/projectsSlice"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
+import { ApplyModal } from "@/components/apply-modal"
+import { useApplyToProjectMutation, useCheckApplicationStatusQuery } from "@/api/features/application/applicationSlice"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useDeleteProjectMutation } from "@/api/features/projects/projectsSlice"
+import { useRouter } from "next/navigation"
+
+const formatString = (str: string) => {
+  return str?.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
 export default function ProjectPage({ params }: { params: { id: string } }) {
+  const [user, setUser] = useState<any>(null);
+  const [isClient, setIsClient] = useState(false)
 
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setIsClient(true)
+  }, []);
 
-    const [user, setUser] = useState<any>(null);
-  
-    useEffect(() => {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    }, []);
-  
-    const isFounder = user?.role === "founder";
-
+  const isFounder = user?.role === "founder";
   const [hasApplied, setHasApplied] = useState(false)
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false)
 
-  // This would normally be fetched from an API based on the ID
-  const project = {
-    id: params.id,
-    title: "AI-Powered Health Tracking App",
-    description:
-      "We're building a revolutionary health tracking app that uses artificial intelligence to provide personalized recommendations to users. The app will track various health metrics, analyze patterns, and offer actionable insights to improve overall wellbeing.",
-    longDescription:
-      "Our vision is to create a health companion that goes beyond simple tracking. By leveraging machine learning algorithms, we'll analyze user data to identify patterns and provide truly personalized recommendations. The app will include features like meal planning based on nutritional needs, workout suggestions tailored to fitness goals, and sleep optimization strategies.\n\nWe've already completed market research and created wireframes. Now we need a talented team to bring this vision to life.",
-    founder: {
-      name: "Alex Johnson",
-      avatar: "AJ",
-      title: "Healthcare Technologist",
-      rating: "4.8",
-      completedProjects: 3,
-    },
-    skills: ["React Native", "AI/ML", "UI/UX Design", "Backend Development", "Health Data Analytics"],
-    type: "Startup",
-    timeline: "3-6 months",
-    team: {
-      required: [
-        { role: "React Native Developer", filled: false },
-        { role: "UI/UX Designer", filled: false },
-        { role: "Machine Learning Engineer", filled: true },
-        { role: "Backend Developer", filled: false },
-      ],
-      size: "4-5 members",
-    },
-    equity: "Potential equity for key team members",
-    updates: [
-      { date: "2023-05-15", content: "Project created" },
-      { date: "2023-05-20", content: "Added detailed requirements document" },
-      { date: "2023-05-25", content: "First team member joined - Welcome Sarah (ML Engineer)!" },
-    ],
+  const { data: project, isLoading: isProjectLoading, isError: isProjectError } = useGetProjectByIdQuery(params.id as string);
+  const [applyToProject, { isLoading, isSuccess, isError, reset }] = useApplyToProjectMutation();
+  const { data: applicationStatus, isLoading: isCheckingStatus, error: checkStatusError } = useCheckApplicationStatusQuery(project?._id, {
+    skip: !project?._id,
+  });
+  const [deleteProject, { isLoading: isDeletingProject }] = useDeleteProjectMutation();
+
+  const router = useRouter();
+
+
+  useEffect(() => {
+    console.log(applicationStatus)
+    if (applicationStatus?.hasApplied === true) {
+      setHasApplied(true);
+    }
+  }, [applicationStatus]);
+
+  const totalTeamSize = project?.rolesNeeded?.reduce((sum: number, role: any) => sum + role.count, 0);
+
+  const handleApply = async (role: string, message: string) => {
+    console.log("demilade Applies")
+    if (!project?._id) {
+      toast("Project ID is missing.");
+      return;
+    }
+    try {
+      await applyToProject({ projectId: project._id, role, message }).unwrap();
+      toast("Application Submitted");
+    } catch (error) {
+      console.error("Failed to apply to project:", error);
+      toast("Failed to submit application. Please try again.");
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!project?._id) {
+      toast("Project ID is missing.");
+      return;
+    }
+    try {
+      await deleteProject(project._id).unwrap();
+      toast("Project Deleted");
+      router.push("/projects");
+    } catch (error) {
+      console.error("Failed to delete project:", error);
+      toast("Failed to delete project. Please try again.");
+    }
+  };
+
+  if (isProjectLoading) {
+    return (
+      <div className="container py-10 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
-  const handleApply = () => {
-    setHasApplied(true)
-    toast({
-      title: "Application Submitted",
-      description: "Your application has been sent to the project founder.",
-    })
+  if (isProjectError) {
+    return (
+      <div className="container py-10 flex items-center justify-center text-red-500">
+        Error loading project data.
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="container py-10 flex items-center justify-center">
+        Project not found.
+      </div>
+    );
   }
 
   return (
@@ -81,16 +130,16 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   ← Back to Projects
                 </Button>
               </Link>
-              <Badge variant="outline">{project.type}</Badge>
+              <Badge variant="outline">Project Type: {formatString(project.type)}</Badge>
             </div>
             <h1 className="text-3xl font-bold">{project.title}</h1>
             <div className="flex items-center space-x-4">
               <Avatar>
-                <AvatarFallback>{project.founder.avatar}</AvatarFallback>
+                <AvatarFallback>{project.founder.name.substring(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div>
                 <p className="font-medium">{project.founder.name}</p>
-                <p className="text-sm text-muted-foreground">{project.founder.title}</p>
+                <p className="text-sm text-muted-foreground">Founder</p>
               </div>
             </div>
           </div>
@@ -98,29 +147,64 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           <Tabs defaultValue="overview">
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="team">Team</TabsTrigger>
               <TabsTrigger value="updates">Updates</TabsTrigger>
-              {isFounder && <TabsTrigger value="applications">Applications</TabsTrigger>}
+              {isClient && isFounder && <TabsTrigger value="applications">Applications</TabsTrigger>}
             </TabsList>
-            <TabsContent value="overview" className="space-y-6">
+            <TabsContent value="overview" className="space-y-6 mt-[25px]">
               <Card>
                 <CardHeader>
                   <CardTitle>Project Description</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="whitespace-pre-line">{project.longDescription}</p>
+                  <p className="whitespace-pre-line">{project.description}</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Skills Needed</CardTitle>
+                  <CardTitle>Skills</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    {project.skills.map((skill, index) => (
+                    {project.skillSummary.split(",").map((skill: any, index: any) => (
                       <Badge key={index} variant="secondary">
-                        {skill}
+                        {skill.trim()}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Team Composition</CardTitle>
+                  <CardDescription>Looking for a team of {totalTeamSize}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-4">
+                    {project.rolesNeeded?.map((role: any, index: any) => (
+                      <li key={index} className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Users className="h-5 w-5 text-muted-foreground" />
+                          <span>{role.skill}</span>
+                        </div>
+                        <Badge variant={"outline"}>
+                          {role.count} Open
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Compensation</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {project.compensation?.map((item: string, index: number) => (
+                      <Badge key={index} variant="secondary">
+                        {formatString(item)}
                       </Badge>
                     ))}
                   </div>
@@ -128,47 +212,12 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
               </Card>
             </TabsContent>
 
-            <TabsContent value="team" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Team Composition</CardTitle>
-                  <CardDescription>Looking for a team of {project.team.size}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-4">
-                    {project.team.required.map((position, index) => (
-                      <li key={index} className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Users className="h-5 w-5 text-muted-foreground" />
-                          <span>{position.role}</span>
-                        </div>
-                        <Badge variant={position.filled ? "success" : "outline"}>
-                          {position.filled ? "Filled" : "Open"}
-                        </Badge>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Compensation</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center space-x-2">
-                    <Briefcase className="h-5 w-5 text-muted-foreground" />
-                    <span>{project.equity}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="updates" className="space-y-6">
+            <TabsContent value="updates" className="space-y-6 mt-[25px]">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Project Updates</CardTitle>
-                  {isFounder && (
+                  {isClient && isFounder && (
                     <Button size="sm" variant="outline">
                       <Edit className="mr-2 h-4 w-4" />
                       Add Update
@@ -176,22 +225,28 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   )}
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-4">
-                    {project.updates.map((update, index) => (
-                      <li key={index} className="flex items-start space-x-3 pb-4 border-b last:border-0">
-                        <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">{update.date}</p>
-                          <p>{update.content}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  {project.updates && project.updates.length > 0 ? (
+                    <ul className="space-y-4">
+                      {project.updates?.map((update: any, index: any) => (
+                        <li key={index} className="flex items-start space-x-3 pb-4 border-b last:border-0">
+                          <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">{new Date(update.date).toLocaleDateString()}</p>
+                            <p>{update.content}</p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-center text-muted-foreground py-8">
+                      <p>No updates available yet.</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {isFounder && (
+            {isClient && isFounder && (
               <TabsContent value="applications" className="space-y-6">
                 <Card>
                   <CardHeader>
@@ -277,22 +332,74 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         </div>
 
         <div className="space-y-6">
-          {isFounder ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Project Management</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Button className="w-full">
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit Project
-                </Button>
-                <Button variant="outline" className="w-full">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Invite Contributors
-                </Button>
-              </CardContent>
-            </Card>
+          {isClient ? (
+            isFounder ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Project Management</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Link href={`/projects/${params.id}/edit`} className="w-full">
+                    <Button className="w-full">
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit Project
+                    </Button>
+                  </Link>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" className="w-full" disabled={isDeletingProject}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {isDeletingProject ? "Deleting..." : "Delete Project"}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your project
+                          and remove your data from our servers.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteProject}>Continue</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Apply to Join</CardTitle>
+                  <CardDescription>Express your interest in this project</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {isCheckingStatus ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : applicationStatus?.hasApplied === true ? (
+                    <div className="text-center py-2">
+                      <Badge variant="outline" className="mb-2">
+                        Application Status: {formatString(applicationStatus.application.status)}
+                      </Badge>
+                      {applicationStatus.message && (
+                        <p className="text-sm text-muted-foreground">{applicationStatus.message}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <Button className="w-full" onClick={() => setIsApplyModalOpen(true)}>
+                      Apply Now
+                    </Button>
+                  )}
+                  <Button variant="outline" className="w-full">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Message Founder
+                  </Button>
+                </CardContent>
+              </Card>
+            )
           ) : (
             <Card>
               <CardHeader>
@@ -300,19 +407,10 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                 <CardDescription>Express your interest in this project</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {hasApplied ? (
-                  <div className="text-center py-2">
-                    <Badge variant="outline" className="mb-2">
-                      Application Submitted
-                    </Badge>
-                    <p className="text-sm text-muted-foreground">The project founder will review your application.</p>
-                  </div>
-                ) : (
-                  <Button className="w-full" onClick={handleApply}>
-                    Apply Now
-                  </Button>
-                )}
-                <Button variant="outline" className="w-full">
+                <Button className="w-full" disabled>
+                  Apply Now
+                </Button>
+                <Button variant="outline" className="w-full" disabled>
                   <MessageSquare className="mr-2 h-4 w-4" />
                   Message Founder
                 </Button>
@@ -328,9 +426,9 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <Clock className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-muted-foreground">Timeline</span>
+                  <span className="text-muted-foreground">Duration</span>
                 </div>
-                <span>{project.timeline}</span>
+                <span>{formatString(project.timeline)}</span>
               </div>
 
               <div className="flex items-center justify-between">
@@ -338,7 +436,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   <Users className="h-5 w-5 text-muted-foreground" />
                   <span className="text-muted-foreground">Team Size</span>
                 </div>
-                <span>{project.team.size}</span>
+                <span>{totalTeamSize}</span>
               </div>
 
               <div className="flex items-center justify-between">
@@ -346,20 +444,20 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   <Star className="h-5 w-5 text-muted-foreground" />
                   <span className="text-muted-foreground">Founder Rating</span>
                 </div>
-                <span>PCA: {project.founder.rating}</span>
+                <span>PCA: 5.0</span>
               </div>
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <Award className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-muted-foreground">Completed Projects</span>
+                  <span className="text-muted-foreground">Time Commitment</span>
                 </div>
-                <span>{project.founder.completedProjects}</span>
+                <span>{formatString(project.timeCommitment)}</span>
               </div>
             </CardContent>
           </Card>
 
-          {!isFounder && (
+          {isClient && !isFounder && (
             <Card>
               <CardHeader>
                 <CardTitle>Similar Projects</CardTitle>
@@ -381,6 +479,16 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
             </Card>
           )}
         </div>
+        <ApplyModal
+          isOpen={isApplyModalOpen}
+          onClose={() => setIsApplyModalOpen(false)}
+          onSubmit={handleApply}
+          rolesNeeded={project.rolesNeeded}
+          isLoading={isLoading}
+          isSuccess={isSuccess}
+          isError={isError}
+          reset={reset}
+        />
       </div>
     </div>
   )

@@ -3,8 +3,9 @@ import backendUrl from "./config";
 
 export const apiSlice = createApi({
   reducerPath: "api",
+  tagTypes: ['ApplicationStatus', 'MyApplications', 'Project'], // Add 'Project' here
   baseQuery: fetchBaseQuery({
-    baseUrl: backendUrl.hostedURL, // adjust as needed
+    baseUrl: backendUrl.hostedURL,
     prepareHeaders: (headers, { getState }) => {
       const token = localStorage.getItem("token");
       if (token) {
@@ -16,6 +17,7 @@ export const apiSlice = createApi({
   endpoints: (builder) => ({
     getProjects: builder.query<any[], void>({
       query: () => "/projects",
+      providesTags: ['Project'], // Add this to tag the query
     }),
     createProject: builder.mutation({
       query: (data) => ({
@@ -23,9 +25,12 @@ export const apiSlice = createApi({
         method: "POST",
         body: data,
       }),
+      invalidatesTags: ['Project'], // Add this to invalidate on create
     }),
-    // Add more like login, applyToProject, rateUser, etc.
   }),
 });
 
-export const { useGetProjectsQuery, useCreateProjectMutation } = apiSlice;
+export const {
+  useGetProjectsQuery,
+  useCreateProjectMutation
+} = apiSlice;
