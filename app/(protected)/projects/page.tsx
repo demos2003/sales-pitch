@@ -6,15 +6,18 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter, Loader2 } from "lucide-react"
+import { Search, Filter, Loader2, PlusCircle } from "lucide-react"
 import { useGetAllProjectsQuery, setSelectedProject } from "@/api/features/projects/projectsSlice"
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
+import { RootState } from "@/api/store"
 
 
 export default function ProjectsPage() {
 
   const dispatch = useDispatch();
   const { data: projects = [], isLoading, isError } = useGetAllProjectsQuery();
+  const user = useSelector((state: RootState) => state.auth.user);
+  const isFounder = user?.role === "founder";
 
   const handleViewProject = (project: any) => {
     dispatch(setSelectedProject(project));
@@ -28,6 +31,14 @@ export default function ProjectsPage() {
           <p className="text-muted-foreground">Find exciting projects that match your skills and interests</p>
         </div>
         <div className="flex items-center space-x-2">
+          {isFounder && (
+            <Link href="/create-project">
+              <Button size="sm">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                New Project
+              </Button>
+            </Link>
+          )}
           <Button variant="outline" size="sm">
             <Filter className="mr-2 h-4 w-4" />
             Filters

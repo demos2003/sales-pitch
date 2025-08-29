@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -10,8 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { InterestSelectionModal } from "./interest-selection-modal"
-import { useRouter } from "next/navigation"
+import { InterestSelectionModal } from "@/components/interest-selection-modal"
+import { useUpdateSkillsMutation } from "@/api/features/profile/profileSlice"
 
 interface FirstLoginModalProps {
   isOpen: boolean
@@ -23,6 +24,7 @@ export function FirstLoginModal({ isOpen, onComplete }: FirstLoginModalProps) {
   const [showInterestModal, setShowInterestModal] = useState(false)
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const router = useRouter()
+  const [updateSkills, { isLoading: isUpdating }] = useUpdateSkillsMutation()
 
   const handleNext = () => {
     if (step === 1) {
@@ -34,10 +36,17 @@ export function FirstLoginModal({ isOpen, onComplete }: FirstLoginModalProps) {
     }
   }
 
-  const handleInterestsSave = (interests: string[]) => {
-    setSelectedInterests(interests)
-    setShowInterestModal(false)
-    setStep(2)
+  const handleInterestsSave = async (interests: string[]) => {
+    try {
+      // Save the selected skills using the profile slice
+      await updateSkills({ skills: interests }).unwrap()
+      setSelectedInterests(interests)
+      setShowInterestModal(false)
+      setStep(2)
+    } catch (error) {
+      console.error('Error saving skills:', error)
+      // You might want to show an error toast here
+    }
   }
 
   const handleSkip = () => {
@@ -73,11 +82,17 @@ export function FirstLoginModal({ isOpen, onComplete }: FirstLoginModalProps) {
             {step === 1 && (
               <div className="space-y-4">
                 <div className="rounded-lg border p-4">
-                  <h3 className="font-medium mb-2">Select Your Tech Interests</h3>
+                  <h3 className="font-medium mb-2">Select Your Tech Skills</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Tell us what technologies and areas you're interested in to help us recommend relevant projects.
+                    Select up to 20 skills that best represent your expertise. This helps us match you with relevant projects.
                   </p>
-                  <Button onClick={() => setShowInterestModal(true)}>Select Interests</Button>
+                  <Button 
+                    onClick={() => setShowInterestModal(true)} 
+                    variant="accent"
+                    disabled={selectedInterests.length >= 20}
+                  >
+                    {selectedInterests.length > 0 ? 'Edit Skills' : 'Select Skills'}
+                  </Button>
                 </div>
                 {selectedInterests.length > 0 && (
                   <p className="text-sm text-muted-foreground">
@@ -95,7 +110,7 @@ export function FirstLoginModal({ isOpen, onComplete }: FirstLoginModalProps) {
                     Add your skills, experience, and upload your resume to increase your chances of being selected for
                     projects.
                   </p>
-                  <Button onClick={() => router.push("/profile/settings")}>Edit Profile</Button>
+                  <Button onClick={() => router.push("/profile/settings")} variant="accent">Edit Profile</Button>
                 </div>
               </div>
             )}
@@ -107,7 +122,7 @@ export function FirstLoginModal({ isOpen, onComplete }: FirstLoginModalProps) {
                   <p className="text-sm text-muted-foreground mb-4">
                     Browse through projects that match your interests and apply to ones that excite you.
                   </p>
-                  <Button onClick={() => router.push("/projects")}>Find Projects</Button>
+                  <Button onClick={() => router.push("/projects")} variant="accent">Find Projects</Button>
                 </div>
               </div>
             )}
@@ -118,7 +133,7 @@ export function FirstLoginModal({ isOpen, onComplete }: FirstLoginModalProps) {
               <Button variant="ghost" onClick={handleSkip}>
                 {step < 3 ? "Skip for now" : "Maybe later"}
               </Button>
-              <Button onClick={handleNext} disabled={step === 1 && selectedInterests.length === 0}>
+              <Button onClick={handleNext} disabled={step === 1 && selectedInterests.length === 0} variant="accent">
                 {step < 3 ? "Next" : "Finish"}
               </Button>
             </div>

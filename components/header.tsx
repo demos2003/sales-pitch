@@ -2,7 +2,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "./mode-toggle"
 import { Menu, X, User, LogOut, Settings, PlusCircle } from "lucide-react"
@@ -18,14 +18,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useDispatch, useSelector } from "react-redux"
+import SessionStatus from "@/components/session-status"
 import { logout } from "@/api/features/auth/authSlice"
 import { RootState } from "@/api/store"
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isClient, setIsClient] = useState(false)
   const pathname = usePathname()
   const dispatch = useDispatch()
   const user = useSelector((state: RootState) => state.auth.user)
+
+  // Handle client-side hydration
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   const publicNavigation = [
     { name: "Home", href: "/" },
@@ -38,11 +45,13 @@ export default function Header() {
     { name: "Dashboard", href: "/dashboard" },
     { name: "Projects", href: "/projects" },
     { name: "Applications", href: "/messages" },
+    { name: "Messages", href: "/chat" },
   ]
 
   const isFounder = user?.role === "founder"
 
-  const navigation = user ? privateNavigation : publicNavigation
+  // Use public navigation during SSR, then switch to appropriate navigation on client
+  const navigation = isClient && user ? privateNavigation : publicNavigation
 
   const handleLogout = () => {
     dispatch(logout())
@@ -53,7 +62,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link href={user ? "/dashboard" : "/"} className="flex items-center">
+          <Link href={isClient && user ? "/dashboard" : "/"} className="flex items-center">
             <Image src="/SalesPitchLogo.png" alt="slaes-pitch-logo" width={70} height={70} />
             <span className="text-xl font-bold">Sales Pitch</span>
           </Link>
@@ -75,9 +84,10 @@ export default function Header() {
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
+       
           <ModeToggle />
 
-          {user ? (
+          {isClient && user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -101,7 +111,7 @@ export default function Header() {
                     <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
-                {isFounder && (
+                {isClient && isFounder && (
                   <DropdownMenuItem asChild>
                     <Link href="/create-project">
                       <PlusCircle className="mr-2 h-4 w-4" />
@@ -156,7 +166,7 @@ export default function Header() {
               </Link>
             ))}
 
-            {user ? (
+            {isClient && user ? (
               <>
                 <Link href="/profile" onClick={() => setIsMenuOpen(false)}>
                   <Button variant="outline" className="w-full flex items-center justify-start">
@@ -170,7 +180,7 @@ export default function Header() {
                     Settings
                   </Button>
                 </Link>
-                {isFounder && (
+                {isClient && isFounder && (
                   <Link href="/create-project" onClick={() => setIsMenuOpen(false)}>
                     <Button variant="outline" className="w-full flex items-center justify-start">
                       <PlusCircle className="mr-2 h-4 w-4" />

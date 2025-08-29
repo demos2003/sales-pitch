@@ -18,12 +18,12 @@ export function HeroSection() {
             </div>
             <div className="flex flex-col gap-2 min-[400px]:flex-row">
               <Link href="/auth?role=founder">
-                <Button size="lg" className="w-full">
+                <Button size="lg" variant="accent" className="w-full">
                   Join as a Founder
                 </Button>
               </Link>
               <Link href="/auth?role=creative">
-                <Button size="lg" variant="outline" className="w-full">
+                <Button size="lg" variant="outline" className="w-full border-accentBlue text-accentBlue hover:bg-accentBlue/10">
                   Join as a Tech Creative
                 </Button>
               </Link>

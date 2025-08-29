@@ -34,7 +34,14 @@ export const applicationSlice = apiSlice.injectEndpoints({
       query: () => `/applications/founder/grouped`
     }),
 
-
+    // Cancel application mutation
+    cancelApplication: builder.mutation<any, string>({
+      query: (applicationId) => ({
+        url: `/applications/${applicationId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ['MyApplications', 'ApplicationStatus'], // Invalidate relevant tags
+    }),
 
   }),
 });
@@ -46,4 +53,5 @@ export const {
   useGetMyApplicationsQuery,
   useGetApplicationsGroupedByProjectForFounderQuery,
   useUpdateApplicationStatusMutation,
+  useCancelApplicationMutation,
 } = applicationSlice;

@@ -19,7 +19,7 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp"
-import { ArrowLeft, Shield, Smartphone, Mail } from "lucide-react"
+import { ArrowLeft, Shield, Smartphone, Mail, Loader2, Eye, EyeOff } from "lucide-react"
 import { useLoginMutation, useSignUpMutation } from "@/api/features/auth/authApiSlice"
 import { useDispatch } from "react-redux"
 import { setCredentials } from "@/api/features/auth/authSlice"
@@ -45,14 +45,68 @@ export default function AuthPage() {
   const [tempAuthData, setTempAuthData] = useState<any>(null)
   const [verifyOtp] = useVerifyOtpMutation()
 
-
   // Add OTP-related state
   const [otp, setOtp] = useState("")
   const [isVerifying, setIsVerifying] = useState(false)
 
+  // Add loading states
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const [isSigningUp, setIsSigningUp] = useState(false)
+
+  // Add password visibility states
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const [showSignupPassword, setShowSignupPassword] = useState(false)
+
+  // Add form errors
+  const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: string; general?: string }>({})
+  const [signupErrors, setSignupErrors] = useState<{ name?: string; email?: string; password?: string; general?: string }>({})
+
   const dispatch = useDispatch()
   const [login] = useLoginMutation()
   const [signUp] = useSignUpMutation()
+
+  // Validation functions
+  const validateLoginForm = () => {
+    const errors: { email?: string; password?: string } = {}
+    
+    if (!email.trim()) {
+      errors.email = "Email is required"
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      errors.email = "Please enter a valid email address"
+    }
+    
+    if (!password.trim()) {
+      errors.password = "Password is required"
+    } else if (password.length < 6) {
+      errors.password = "Password must be at least 6 characters"
+    }
+    
+    setLoginErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const validateSignupForm = () => {
+    const errors: { name?: string; email?: string; password?: string } = {}
+    
+    if (!name.trim()) {
+      errors.name = "Full name is required"
+    }
+    
+    if (!email.trim()) {
+      errors.email = "Email is required"
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      errors.email = "Please enter a valid email address"
+    }
+    
+    if (!password.trim()) {
+      errors.password = "Password is required"
+    } else if (password.length < 6) {
+      errors.password = "Password must be at least 6 characters"
+    }
+    
+    setSignupErrors(errors)
+    return Object.keys(errors).length === 0
+  }
 
   // Mock 2FA verification - automatically succeeds after 1.5 seconds
 const verify2FA = async (otpValue: string) => {
@@ -71,7 +125,7 @@ const verify2FA = async (otpValue: string) => {
         description: `Welcome back, ${response.user.name}`,
       })
 
-      setTimeout(() => router.push("/dashboard"), 1000)
+      setTimeout(() => window.location.href = "/dashboard", 1000)
     } else {
       throw new Error("Unexpected response from server.")
     }
@@ -98,6 +152,16 @@ const verify2FA = async (otpValue: string) => {
 
 const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault()
+  
+  // Clear previous errors
+  setLoginErrors({})
+  
+  // Validate form
+  if (!validateLoginForm()) {
+    return
+  }
+
+  setIsLoggingIn(true)
 
   try {
     const response = await login({ email, password }).unwrap()
@@ -126,22 +190,36 @@ const handleLogin = async (e: React.FormEvent) => {
         description: `Welcome back, ${response.user.name}`,
       })
 
-      setTimeout(() => router.push("/dashboard"), 1000)
+      setTimeout(() => window.location.href = "/dashboard", 1000)
     } else {
       throw new Error("Unexpected response format")
     }
   } catch (err: any) {
+    const errorMessage = err?.data?.message || "Something went wrong"
+    setLoginErrors({ general: errorMessage })
     toast({
       title: "Login failed",
-      description: err?.data?.message || "Something went wrong",
+      description: errorMessage,
       variant: "destructive",
     })
+  } finally {
+    setIsLoggingIn(false)
   }
 }
 
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Clear previous errors
+    setSignupErrors({})
+    
+    // Validate form
+    if (!validateSignupForm()) {
+      return
+    }
+    
+    setIsSigningUp(true)
     const backendRole = role === "creative" ? "contributor" : "founder"
 
     try {
@@ -164,11 +242,15 @@ const handleLogin = async (e: React.FormEvent) => {
 
       setTimeout(() => router.push("/dashboard"), 1000)
     } catch (err: any) {
+      const errorMessage = err?.data?.message || "Something went wrong"
+      setSignupErrors({ general: errorMessage })
       toast({
         title: "Signup failed",
-        description: err?.data?.message || "Something went wrong",
+        description: errorMessage,
         variant: "destructive",
       })
+    } finally {
+      setIsSigningUp(false)
     }
   }
 
@@ -219,20 +301,6 @@ const handleLogin = async (e: React.FormEvent) => {
                 <form onSubmit={handleLogin}>
                   <CardContent className="space-y-4 pt-4">
                     <div className="space-y-2">
-                      <Label>I am a:</Label>
-                      <RadioGroup value={loginRole} onValueChange={setLoginRole} className="flex space-x-4">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="founder" id="login-founder" />
-                          <Label htmlFor="login-founder">Founder</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="creative" id="login-creative" />
-                          <Label htmlFor="login-creative">Tech Creative</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-
-                    <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
                       <Input
                         id="email"
@@ -241,7 +309,9 @@ const handleLogin = async (e: React.FormEvent) => {
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        className={loginErrors.email ? "border-red-500" : ""}
                       />
+                      {loginErrors.email && <p className="text-red-500 text-xs mt-1">{loginErrors.email}</p>}
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -253,22 +323,40 @@ const handleLogin = async (e: React.FormEvent) => {
                           Forgot password?
                         </Link>
                       </div>
-                      <Input
-                        id="password"
-                        type="password"
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          type={showLoginPassword ? "text" : "password"}
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className={`pr-10 ${loginErrors.password ? "border-red-500" : ""}`}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        >
+                          {showLoginPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
+                      {loginErrors.password && <p className="text-red-500 text-xs mt-1">{loginErrors.password}</p>}
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox id="remember" />
                       <Label htmlFor="remember">Remember me</Label>
                     </div>
+                    {loginErrors.general && <p className="text-red-500 text-xs mt-2">{loginErrors.general}</p>}
                   </CardContent>
                   <CardFooter className="flex flex-col space-y-4">
-                    <Button type="submit" className="w-full">
-                      Log in as {loginRole === "creative" ? "Tech Creative" : "Founder"}
+                    <Button type="submit" className="w-full" disabled={isLoggingIn}>
+                      {isLoggingIn ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Log in "}
                     </Button>
                     <div className="text-center text-sm text-muted-foreground">
                       Don't have an account?{" "}
@@ -308,7 +396,9 @@ const handleLogin = async (e: React.FormEvent) => {
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        className={signupErrors.name ? "border-red-500" : ""}
                       />
+                      {signupErrors.name && <p className="text-red-500 text-xs mt-1">{signupErrors.name}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-email">Email</Label>
@@ -319,17 +409,36 @@ const handleLogin = async (e: React.FormEvent) => {
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        className={signupErrors.email ? "border-red-500" : ""}
                       />
+                      {signupErrors.email && <p className="text-red-500 text-xs mt-1">{signupErrors.email}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-password">Password</Label>
-                      <Input
-                        id="signup-password"
-                        type="password"
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
+                      <div className="relative">
+                        <Input
+                          id="signup-password"
+                          type={showSignupPassword ? "text" : "password"}
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className={`pr-10 ${signupErrors.password ? "border-red-500" : ""}`}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowSignupPassword(!showSignupPassword)}
+                        >
+                          {showSignupPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
+                      {signupErrors.password && <p className="text-red-500 text-xs mt-1">{signupErrors.password}</p>}
                     </div>
 
                     {role === "founder" && (
@@ -365,8 +474,8 @@ const handleLogin = async (e: React.FormEvent) => {
                             <Label htmlFor="designer">Designer</Label>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="pm" id="pm" />
-                            <Label htmlFor="pm">Product Manager</Label>
+                            <RadioGroupItem value="product_manager" id="product_manager" />
+                            <Label htmlFor="product_manager">Product Manager</Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="other" id="other" />
@@ -389,10 +498,12 @@ const handleLogin = async (e: React.FormEvent) => {
                         </Link>
                       </Label>
                     </div>
+                    {signupErrors.general && <p className="text-red-500 text-xs mt-2">{signupErrors.general}</p>}
                   </CardContent>
                   <CardFooter className="flex flex-col space-y-4">
-                    <Button type="submit" className="w-full">
-                      Create {role === "creative" ? "Tech Creative" : "Founder"} Account
+                    <Button type="submit" className="w-full" disabled={isSigningUp}>
+                      {isSigningUp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Create "}
+                      {role === "creative" ? "Tech Creative" : "Founder"} Account
                     </Button>
                     <div className="text-center text-sm text-muted-foreground">
                       Already have an account?{" "}
@@ -447,6 +558,7 @@ const handleLogin = async (e: React.FormEvent) => {
                     onChange={setOtp}
                     onComplete={handleOTPComplete}
                     disabled={isVerifying}
+                    autoFocus
                   >
                     <InputOTPGroup>
                       <InputOTPSlot index={0} />

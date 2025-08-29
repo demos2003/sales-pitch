@@ -18,6 +18,7 @@ import { Mail, Calendar, MessageSquare, User, Briefcase } from "lucide-react"
 import { useUpdateApplicationStatusMutation } from "@/api/features/application/applicationSlice"
 import { toast } from "sonner"
 import { useGetApplicationsGroupedByProjectForFounderQuery } from "@/api/features/application/applicationSlice"
+import { ChatButton } from "@/components/chat/chat-button"
 
 
 interface ApplicantProfileProps {
@@ -85,7 +86,7 @@ export function ApplicantProfile({ applicant, onBack }: ApplicantProfileProps) {
       onBack() // ✅ go back to project overview
     } catch (err) {
       toast.error("Failed to update application status")
-      console.error(err)
+      console.log(err)
     }
   }
 
@@ -212,29 +213,43 @@ export function ApplicantProfile({ applicant, onBack }: ApplicantProfileProps) {
             </div>
           </ScrollArea>
 
-          {applicant.status === "pending" && (
-            <div className="pt-4 border-t mt-4">
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => setShowModal("accepted")}
-                  className="flex-1"
-                  size="lg"
-                  disabled={isLoading}
-                >
-                  Accept Application
-                </Button>
-                <Button
-                  onClick={() => setShowModal("rejected")}
-                  variant="destructive"
-                  className="flex-1"
-                  size="lg"
-                  disabled={isLoading}
-                >
-                  Reject Application
-                </Button>
-              </div>
+          <div className="pt-4 border-t mt-4">
+            <div className="flex gap-3">
+              {/* Chat Button - always visible */}
+              <ChatButton
+                projectId={applicant.project._id}
+                contributorId={applicant.applicant._id}
+                contributorName={applicant.applicant.name}
+                projectTitle={applicant.project.title}
+                className="flex-1"
+                size="lg"
+              />
+              
+              {/* Action buttons - only for pending applications */}
+              {applicant.status === "pending" && (
+                <>
+                  <Button
+                    onClick={() => setShowModal("accepted")}
+                    className="flex-1"
+                    size="lg"
+                    disabled={isLoading}
+                    variant="accent"
+                  >
+                    Accept Application
+                  </Button>
+                  <Button
+                    onClick={() => setShowModal("rejected")}
+                    variant="destructive"
+                    className="flex-1"
+                    size="lg"
+                    disabled={isLoading}
+                  >
+                    Reject Application
+                  </Button>
+                </>
+              )}
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
     </>

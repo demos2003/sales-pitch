@@ -147,7 +147,8 @@ export function InterestSelectionModal({
   isFirstLogin = false,
 }: InterestSelectionModalProps) {
   const [selected, setSelected] = useState<string[]>(selectedInterests)
-  const [searchQuery, setSearchQuery] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const MAX_SKILLS = 20
   const [expandedCategories, setExpandedCategories] = useState<string[]>(
     isFirstLogin ? ["Web Development", "AI & Machine Learning"] : [],
   )
@@ -165,54 +166,69 @@ export function InterestSelectionModal({
     )
   }
 
-  const toggleInterest = (interest: string) => {
-    setSelected((prev) => (prev.includes(interest) ? prev.filter((i) => i !== interest) : [...prev, interest]))
+  const handleInterestToggle = (interest: string) => {
+    setSelected(prevSelected => {
+      if (prevSelected.includes(interest)) {
+        // If already selected, remove it
+        return prevSelected.filter(i => i !== interest);
+      } else if (prevSelected.length < MAX_SKILLS) {
+        // Only add if under the limit
+        return [...prevSelected, interest];
+      }
+      // If at limit, don't add
+      return prevSelected;
+    });
   }
 
   const handleSave = () => {
-    onSave(selected)
+    onSave(selected);
   }
 
   // Filter interests based on search query
-  const filteredInterests = searchQuery
-    ? Object.entries(TECH_INTERESTS).reduce(
-        (acc, [category, interests]) => {
-          const filtered = interests.filter((interest) => interest.toLowerCase().includes(searchQuery.toLowerCase()))
-          if (filtered.length > 0) {
-            acc[category] = filtered
-          }
-          return acc
-        },
-        {} as Record<string, string[]>,
-      )
-    : TECH_INTERESTS
+  const filteredInterests = Object.entries(TECH_INTERESTS).map(([category, interests]) => ({
+    category,
+    interests: interests.filter((interest) =>
+      interest.toLowerCase().includes(searchTerm.toLowerCase()),
+    ),
+  }))
+
+  const selectedCount = selectedInterests.length
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Select Your Tech Interests</DialogTitle>
+          <DialogTitle>
+            {isFirstLogin ? "Select Your Tech Skills" : "Edit Your Skills"}
+          </DialogTitle>
           <DialogDescription>
             {isFirstLogin
-              ? "Welcome to Sales Pitch! Select the tech areas you're interested in to help us recommend relevant projects."
-              : "Choose the tech areas you're interested in to improve project recommendations."}
+              ? `Select up to ${MAX_SKILLS} skills that best represent your expertise. This helps us match you with relevant projects.`
+              : `Update your skills to refine your project recommendations. (${selectedCount}/${MAX_SKILLS} selected)`}
           </DialogDescription>
+          {selectedCount >= MAX_SKILLS && (
+            <div className="text-sm text-amber-600 dark:text-amber-400">
+              You've reached the maximum number of skills. Remove some to add others.
+            </div>
+          )}
         </DialogHeader>
 
-        <div className="relative mb-4">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search interests..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <div className="sticky top-0 bg-background z-10 pb-4">
+          <div className="relative mb-4">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search interests..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
 
-        <ScrollArea className="flex-1 pr-4 -mr-4">
+        <ScrollArea className="flex-1 pr-4 -mr-4 -ml-1">
           <div className="space-y-6">
-            {Object.entries(filteredInterests).map(([category, interests]) => (
+            {filteredInterests.map(({ category, interests }) => (
               <div key={category} className="space-y-2">
                 <div className="flex items-center cursor-pointer" onClick={() => toggleCategory(category)}>
                   <h3 className="text-lg font-medium flex-1">{category}</h3>
@@ -226,11 +242,12 @@ export function InterestSelectionModal({
                     {interests.map((interest) => (
                       <div key={interest} className="flex items-center space-x-2">
                         <Checkbox
-                          id={`interest-${interest}`}
+                          id={interest}
                           checked={selected.includes(interest)}
-                          onCheckedChange={() => toggleInterest(interest)}
+                          onCheckedChange={() => handleInterestToggle(interest)}
+                          disabled={!selected.includes(interest) && selected.length >= MAX_SKILLS}
                         />
-                        <Label htmlFor={`interest-${interest}`} className="text-sm cursor-pointer">
+                        <Label htmlFor={interest} className="text-sm cursor-pointer">
                           {interest}
                         </Label>
                       </div>
@@ -242,7 +259,7 @@ export function InterestSelectionModal({
           </div>
         </ScrollArea>
 
-        <DialogFooter className="mt-4">
+        <DialogFooter className="mt-4  bottom-0 bg-background pt-4">
           <div className="flex justify-between w-full">
             <div className="text-sm text-muted-foreground">{selected.length} interests selected</div>
             <div className="space-x-2">
@@ -251,7 +268,7 @@ export function InterestSelectionModal({
                   Cancel
                 </Button>
               )}
-              <Button onClick={handleSave}>{isFirstLogin ? "Save & Continue" : "Save Interests"}</Button>
+              <Button onClick={handleSave} variant="accent">{isFirstLogin ? "Save & Continue" : "Save Interests"}</Button>
             </div>
           </div>
         </DialogFooter>

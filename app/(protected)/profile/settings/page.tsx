@@ -19,6 +19,7 @@ import { toast } from "@/components/ui/use-toast"
 import { Upload, X, Save, FileText } from "lucide-react"
 import { InterestSelectionModal } from "@/components/interest-selection-modal"
 import { useGetCurrentUserQuery, useToggle2faMutation } from "@/api/features/auth/authApiSlice"
+import { useGetMyProfileQuery, useUpdateMyProfileMutation } from "@/api/features/profile/profileSlice"
 
 
 export default function ProfileSettingsPage() {
@@ -29,26 +30,64 @@ export default function ProfileSettingsPage() {
   const [resumeFile, setResumeFile] = useState<File | null>(null)
   const [resumeUploaded, setResumeUploaded] = useState(false)
 
-  // Mock data for a tech creative profile
+  // Profile state with proper typing
   const [profile, setProfile] = useState({
-    name: "Jane Smith",
-    email: "jane@example.com",
-    title: "Full Stack Developer",
-    bio: "Passionate developer with 5 years of experience building web and mobile applications. I love working on innovative projects that challenge me to learn new technologies.",
-    location: "San Francisco, CA",
-    website: "https://janesmith.dev",
-    github: "github.com/janesmith",
-    linkedin: "linkedin.com/in/janesmith",
-    skills: ["JavaScript", "React", "Node.js", "TypeScript", "GraphQL"],
-    experience: "5+ years",
-    availability: "part-time",
-    interests: ["AI", "Web Development", "Mobile Apps"],
-    education: "BS Computer Science, Stanford University",
-    languages: ["English", "Spanish"],
+    fullName: "",
+    email: "",
+    professionalTitle: "",
+    bio: "",
+    location: "",
+    links: {
+      website: "",
+      github: "",
+      linkedin: ""
+    },
+    skills: [] as string[],
+    // Keep other fields for compatibility
+    name: "",
+    title: "",
+    website: "",
+    github: "",
+    linkedin: "",
+    experience: "",
+    availability: "",
+    interests: [] as string[],
+    education: "",
+    languages: [] as string[]
   })
+
+  // Fetch profile data
+  const { data: profileData, isLoading: isLoadingProfile } = useGetMyProfileQuery()
+
+  // Update local state when profile data is loaded
+  useEffect(() => {
+    if (profileData) {
+      setProfile({
+        ...profile,
+        fullName: profileData.fullName || "",
+        email: profileData.email || "",
+        professionalTitle: profileData.professionalTitle || "",
+        bio: profileData.bio || "",
+        location: profileData.location || "",
+        links: {
+          website: profileData.links?.website || "",
+          github: profileData.links?.github || "",
+          linkedin: profileData.links?.linkedin || ""
+        },
+        skills: profileData.skills || [],
+        // Map to old fields for compatibility
+        name: profileData.fullName || "",
+        title: profileData.professionalTitle || "",
+        website: profileData.links?.website || "",
+        github: profileData.links?.github || "",
+        linkedin: profileData.links?.linkedin || ""
+      })
+    }
+  }, [profileData])
 
   const { data: user, isLoading, error, refetch } = useGetCurrentUserQuery()
   const [toggle2fa, { isLoading: isToggling }] = useToggle2faMutation()
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateMyProfileMutation()
 
   const handleToggle2FA = async () => {
     try {
@@ -68,12 +107,38 @@ export default function ProfileSettingsPage() {
   }
 
 
-  const handleSaveProfile = () => {
-    // In a real app, this would call an API to update the profile
-    toast({
-      title: "Profile updated",
-      description: "Your profile has been successfully updated.",
-    })
+  const handleSaveProfile = async () => {
+    try {
+      // Prepare the profile data for the API
+      const profileData = {
+        fullName: profile.fullName,
+        email: profile.email,
+        location: profile.location,
+        bio: profile.bio,
+        professionalTitle: profile.professionalTitle,
+        links: {
+          website: profile.website,
+          github: profile.github,
+          linkedin: profile.linkedin
+        },
+        skills: profile.skills
+      };
+
+      // Call the update profile mutation
+      await updateProfile(profileData).unwrap();
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated.",
+      });
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    }
   }
 
   const handlePasswordChange = (e: React.FormEvent) => {
@@ -191,8 +256,9 @@ export default function ProfileSettingsPage() {
                     <Label htmlFor="name">Full Name</Label>
                     <Input
                       id="name"
-                      value={profile.name}
-                      onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                      value={profile.fullName}
+                      onChange={(e) => setProfile({ ...profile, fullName: e.target.value, name: e.target.value })}
+                      disabled={isLoadingProfile}
                     />
                   </div>
                   <div className="space-y-2">
@@ -204,12 +270,27 @@ export default function ProfileSettingsPage() {
                       onChange={(e) => setProfile({ ...profile, email: e.target.value })}
                     />
                   </div>
+                  {/* <div className="space-y-2">
+                    <Label htmlFor="website">Website</Label>
+                    <Input
+                      id="website"
+                      type="url"
+                      value={profile.links.website}
+                      onChange={(e) => setProfile({ 
+                        ...profile, 
+                        links: { ...profile.links, website: e.target.value },
+                        website: e.target.value
+                      })}
+                      disabled={isLoadingProfile}
+                    />
+                  </div> */}
                   <div className="space-y-2">
                     <Label htmlFor="title">Professional Title</Label>
                     <Input
                       id="title"
-                      value={profile.title}
-                      onChange={(e) => setProfile({ ...profile, title: e.target.value })}
+                      value={profile.professionalTitle}
+                      onChange={(e) => setProfile({ ...profile, professionalTitle: e.target.value, title: e.target.value })}
+                      disabled={isLoadingProfile}
                     />
                   </div>
                   <div className="space-y-2">
@@ -218,6 +299,7 @@ export default function ProfileSettingsPage() {
                       id="location"
                       value={profile.location}
                       onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+                      disabled={isLoadingProfile}
                     />
                   </div>
                 </div>
@@ -226,9 +308,10 @@ export default function ProfileSettingsPage() {
                   <Label htmlFor="bio">Bio</Label>
                   <Textarea
                     id="bio"
-                    rows={4}
+                    className="min-h-[100px]"
                     value={profile.bio}
                     onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                    disabled={isLoadingProfile}
                   />
                   <p className="text-xs text-muted-foreground">
                     Brief description of your professional background and interests.
@@ -263,9 +346,25 @@ export default function ProfileSettingsPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button onClick={handleSaveProfile}>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
+                <Button 
+                  onClick={handleSaveProfile} 
+                  disabled={isUpdating || isLoadingProfile}
+                  className="min-w-[120px]"
+                >
+                  {isUpdating ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Changes
+                    </>
+                  )}
                 </Button>
               </CardFooter>
             </Card>

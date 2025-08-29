@@ -36,6 +36,13 @@ export const authApiSlice = apiSlice.injectEndpoints({
       query: () => "/users/me",
     }),
 
+    refreshToken: builder.mutation({
+      query: () => ({
+        url: "/auth/refresh",
+        method: "POST",
+      }),
+    }),
+
   }),
   overrideExisting: true,
 })
@@ -45,5 +52,6 @@ export const {
   useSignUpMutation,
   useToggle2faMutation,
   useVerifyOtpMutation,
-  useGetCurrentUserQuery
+  useGetCurrentUserQuery,
+  useRefreshTokenMutation
 } = authApiSlice

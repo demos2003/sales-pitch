@@ -9,6 +9,7 @@ import Footer from "@/components/footer";
 // import { AuthProvider } from "@/context/auth-context";
 import ReduxProvider from "@/api/provider";
 import { store } from "@/api/store";
+import { ChatProvider } from "@/context/chat-context";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -29,20 +30,22 @@ export default function RootLayout({
       <body className={inter.className}>
         <ReduxProvider > 
           {/* <AuthProvider> */}
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="light"
-              enableSystem
-              disableTransitionOnChange
-            >
-              <div className="flex min-h-screen flex-col">
-                <Header />
-                <main className="flex-1">{children}</main>
-                <Footer />
-              </div>
-              <Toaster/>
-           
-            </ThemeProvider>
+            <ChatProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="light"
+                enableSystem
+                disableTransitionOnChange
+              >
+                <div className="flex min-h-screen flex-col">
+                  <Header />
+                  <main className="flex-1">{children}</main>
+                  <Footer />
+                </div>
+                <Toaster/>
+             
+              </ThemeProvider>
+            </ChatProvider>
           {/* </AuthProvider> */}
         </ReduxProvider>
       </body>

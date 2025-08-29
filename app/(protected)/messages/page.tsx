@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "@/components/ui/use-toast"
 import { Separator } from "@/components/ui/separator"
 import { useEffect } from "react"
-import { useGetMyApplicationsQuery, useGetApplicationsGroupedByProjectForFounderQuery } from "@/api/features/application/applicationSlice"
+import { useGetMyApplicationsQuery, useGetApplicationsGroupedByProjectForFounderQuery, useCancelApplicationMutation } from "@/api/features/application/applicationSlice"
 
 export default function ApplicationsPage() {
   const [user, setUser] = useState<any>(null);
@@ -39,10 +39,9 @@ export default function ApplicationsPage() {
 
   const { data: myApplications, isLoading: isLoadingMyApplications, error: myApplicationsError } = useGetMyApplicationsQuery(undefined, { skip: isFounder });
   const { data: founderProjectsData, isLoading: isLoadingFounderProjects, error: founderProjectsError } = useGetApplicationsGroupedByProjectForFounderQuery(undefined, { skip: !isFounder });
+  const [cancelApplication, { isLoading: isCancelling }] = useCancelApplicationMutation();
 
   const founderProjects = founderProjectsData || [];
-
-  console.log(founderProjects)
 
   // Fixed filtering logic to match actual data structure
   const filteredApplications = myApplications?.filter((app: any) => {
@@ -69,8 +68,6 @@ export default function ApplicationsPage() {
     (item: any) => item.project._id === selectedProject
   )
 
-  console.log(selectedProjectData)
-
   // Get accepted applicants for a project
   const getAcceptedApplicants = () => {
     if (!selectedProjectData || !selectedProjectData.applications) return []
@@ -93,57 +90,6 @@ export default function ApplicationsPage() {
 
   const handleBackToApplicationsList = () => {
     setSelectedApplicant(null)
-  }
-
-  // Handle accept/reject actions
-  const handleAcceptApplication = async () => {
-    if (!selectedApplicantData) return
-
-    try {
-      // TODO: Add your API call here to accept the application
-      // await acceptApplication(selectedApplicantData._id)
-
-      toast({
-        title: "Application Accepted",
-        description: `You have accepted ${selectedApplicantData.applicant.name}'s application.`,
-      })
-
-      // Reset selection and refetch data
-      setSelectedApplicant(null)
-      // You might want to refetch the data here
-
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to accept application. Please try again.",
-        variant: "destructive"
-      })
-    }
-  }
-
-  const handleRejectApplication = async () => {
-    if (!selectedApplicantData) return
-
-    try {
-      // TODO: Add your API call here to reject the application
-      // await rejectApplication(selectedApplicantData._id)
-
-      toast({
-        title: "Application Rejected",
-        description: `You have rejected ${selectedApplicantData.applicant.name}'s application.`,
-      })
-
-      // Reset selection and refetch data
-      setSelectedApplicant(null)
-      // You might want to refetch the data here
-
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to reject application. Please try again.",
-        variant: "destructive"
-      })
-    }
   }
 
   return (
@@ -233,8 +179,15 @@ export default function ApplicationsPage() {
           <ScrollArea className="h-[600px] pr-4">
             <div className="space-y-4">
               {isClient && isFounder ? (
-                // Founder view: Show projects if no project selected, otherwise show applications for selected project
-                selectedProject ? (
+                isLoadingFounderProjects ? (
+                  <div className="flex items-center justify-center h-[400px]">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : founderProjectsError ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    <p>Error loading your projects.</p>
+                  </div>
+                ) : selectedProject ? (
                   getPendingApplicants().length > 0 ? (
                     <div className="space-y-3">
                       {getPendingApplicants().map((application: any) => (
@@ -268,11 +221,10 @@ export default function ApplicationsPage() {
                       <p>No pending applications for this project.</p>
                     </div>
                   )
-                ) : (
+                ) : founderProjects.length > 0 ? (
                   // Show projects list
                   founderProjects.map(({ project, applications }: any) => {
                    const applicantsCount = applications.filter((app: any) => app.status === "pending").length;
-
 
                     return (
                       <Card
@@ -291,6 +243,10 @@ export default function ApplicationsPage() {
                       </Card>
                     );
                   })
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    <p>No projects found.</p>
+                  </div>
                 )
               ) : isClient && isLoadingMyApplications ? (
                 <div className="flex items-center justify-center h-[400px]">
@@ -469,16 +425,33 @@ export default function ApplicationsPage() {
                     <Button
                       variant="destructive"
                       className="w-full"
-                      onClick={() => {
-                        toast({
-                          title: "Application Cancelled",
-                          description: `You have cancelled your application for ${selectedUserApplication.project?.title}.`,
-                        })
-                        // In a real app, you would call an API to cancel the application
-                        // and then update the local state or refetch the data
+                      disabled={isCancelling}
+                      onClick={async () => {
+                        try {
+                          await cancelApplication(selectedUserApplication._id).unwrap();
+                          toast({
+                            title: "Application Cancelled",
+                            description: `You have successfully cancelled your application for ${selectedUserApplication.project?.title}.`,
+                          });
+                          // Close the application details view
+                          setSelectedUserApplication(null);
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to cancel application. Please try again.",
+                            variant: "destructive",
+                          });
+                        }
                       }}
                     >
-                      Cancel Application
+                      {isCancelling ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Cancelling...
+                        </>
+                      ) : (
+                        "Cancel Application"
+                      )}
                     </Button>
                   </div>
                 )}
@@ -500,4 +473,4 @@ export default function ApplicationsPage() {
       </div>
     </div>
   )
-}
+} 

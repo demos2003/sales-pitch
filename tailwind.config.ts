@@ -44,6 +44,12 @@ const config = {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        accentBlue: '#3c82f4', // Custom accent blue
+        secondaryBlue: {
+          DEFAULT: '#3c82f4',
+          light: '#5ba0ff',
+          dark: '#2563eb',
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",

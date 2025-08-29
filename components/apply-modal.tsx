@@ -113,7 +113,7 @@ export function ApplyModal({ isOpen, onClose, onSubmit, rolesNeeded, isLoading, 
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleLocalClose} disabled={isLoading}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={!selectedRole || isLoading}>
+          <Button onClick={handleSubmit} disabled={!selectedRole || isLoading} variant="accent">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Submit Application
           </Button>
