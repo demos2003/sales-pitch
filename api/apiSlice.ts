@@ -4,7 +4,7 @@ import { logout } from "./features/auth/authSlice";
 import { isTokenExpired } from "@/utils/auth";
 
 const baseQueryWithAuth = fetchBaseQuery({
-  baseUrl: backendUrl.flyURL,
+  baseUrl: backendUrl.baseURL,
   prepareHeaders: (headers, { getState }) => {
     const token = localStorage.getItem("token");
     if (token) {
