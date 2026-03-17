@@ -27,7 +27,7 @@ export function HeroSection() {
               Where Founders Meet Tech <span className="text-primary">Creatives.</span>
             </h1>
             <p className="max-w-2xl mx-auto text-lg text-muted-foreground md:text-xl">
-              Don&apos;t hire a team. Turn one on. Your idea&apos;s unfair advantage—connect, collaborate, and ship at no upfront cost.
+              Turn your idea into a product—without being technical. Connect, collaborate, and ship with no upfront cost.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row justify-center items-center animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
