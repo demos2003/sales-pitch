@@ -74,12 +74,12 @@ export default function ProjectsPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project: any) => (
             <Card key={project._id} className="flex flex-col">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-xl">{project.title}</CardTitle>
-                  <Badge variant="outline">{project.type}</Badge>
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-base font-semibold leading-tight">{project.title}</CardTitle>
+                  <Badge variant="outline" className="text-xs shrink-0">{project.type}</Badge>
                 </div>
-                <CardDescription>
+                <CardDescription className="text-xs mt-1">
                   <div className="flex items-center space-x-1">
                     <span>By {project.founder.name}</span>
                     <span>•</span>
@@ -87,27 +87,27 @@ export default function ProjectsPage() {
                   </div>
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex-1">
-                <p className="text-muted-foreground">{project.description}</p>
-                <div className="mt-4">
-                  <p className="text-sm font-medium">Skills needed:</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
+              <CardContent className="flex-1 pt-0">
+                <p className="text-sm text-muted-foreground line-clamp-3">{project.description}</p>
+                <div className="mt-3">
+                  <p className="text-xs font-medium text-muted-foreground">Skills needed:</p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {project.skillSummary.split(',').map((skill: string, index: number) => (
-                      <Badge key={index} variant="secondary">
+                      <Badge key={index} variant="secondary" className="text-xs font-normal">
                         {skill.trim()}
                       </Badge>
                     ))}
                   </div>
                 </div>
-                <div className="mt-4">
-                  <p className="text-sm">
+                <div className="mt-3">
+                  <p className="text-xs text-muted-foreground">
                     <span className="font-medium">Timeline:</span> {project.timeline}
                   </p>
                 </div>
               </CardContent>
-              <CardFooter>
+              <CardFooter className="pt-0">
                 <Link href={`/projects/${project._id}`} className="w-full" onClick={() => handleViewProject(project)}>
-                  <Button className="w-full">View Project</Button>
+                  <Button className="w-full" size="sm">View Project</Button>
                 </Link>
               </CardFooter>
             </Card>

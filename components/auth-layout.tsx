@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import { useAuthManager } from '@/hooks/useAuthManager';
@@ -12,24 +12,28 @@ interface AuthLayoutProps {
 export default function AuthLayout({ children }: AuthLayoutProps) {
   const { isAuthenticated } = useSelector((state: any) => state.auth);
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
   // Initialize auth manager with custom settings
   const { handleLogout } = useAuthManager({
-    idleTimeoutMinutes: 10, // 10 minutes of inactivity
-    checkIntervalMs: 60000, // Check token every minute
+    idleTimeoutMinutes: 10,
+    checkIntervalMs: 60000,
     showWarningBeforeLogout: true,
-    warningTimeMs: 60000, // Show warning 1 minute before logout
+    warningTimeMs: 60000,
   });
 
   useEffect(() => {
-    // Redirect to auth page if not authenticated
-    if (!isAuthenticated) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !isAuthenticated) {
       router.push('/auth');
     }
-  }, [isAuthenticated, router]);
+  }, [mounted, isAuthenticated, router]);
 
-  // Don't render children if not authenticated
-  if (!isAuthenticated) {
+  // Render null until mounted so the client's initial render matches the server
+  if (!mounted || !isAuthenticated) {
     return null;
   }
 

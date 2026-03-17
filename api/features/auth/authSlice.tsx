@@ -6,22 +6,30 @@ interface AuthState {
   isAuthenticated: boolean;
 }
 
-const getUserFromLocalStorage = (): any | null => {
+/** Get token from sessionStorage first (session-only), then localStorage (remember me). */
+export const getStoredToken = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem("token") || localStorage.getItem("token");
+};
+
+/** Get user from the same storage as token: session first, then local. */
+export const getStoredUser = (): any | null => {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem("user");
+    const raw = sessionStorage.getItem("user") || localStorage.getItem("user");
     return raw ? JSON.parse(raw) : null;
   } catch (err) {
-    console.error("Invalid user data in localStorage:", err);
-    localStorage.removeItem("user"); // Clear invalid data
+    console.error("Invalid user data in storage:", err);
+    sessionStorage.removeItem("user");
+    localStorage.removeItem("user");
     return null;
   }
 };
 
 const initialState: AuthState = {
-  user: getUserFromLocalStorage(),
-  token: typeof window !== "undefined" ? localStorage.getItem("token") : null,
-  isAuthenticated: typeof window !== "undefined" ? !!localStorage.getItem("token") : false,
+  user: getStoredUser(),
+  token: getStoredToken(),
+  isAuthenticated: typeof window !== "undefined" ? !!getStoredToken() : false,
 };
 
 const authSlice = createSlice({
@@ -30,24 +38,35 @@ const authSlice = createSlice({
   reducers: {
     setCredentials: (
       state,
-      action: PayloadAction<{ user: any; token: string }>
+      action: PayloadAction<{ user: any; token: string; remember?: boolean }>
     ) => {
-      state.user = action.payload.user;
-      state.token = action.payload.token;
+      const { user, token, remember = true } = action.payload;
+      state.user = user;
+      state.token = token;
       state.isAuthenticated = true;
 
-      // ✅ Save to localStorage with proper stringification
-      localStorage.setItem("token", action.payload.token);
-      localStorage.setItem("user", JSON.stringify(action.payload.user));
+      if (remember) {
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("user");
+      } else {
+        sessionStorage.setItem("token", token);
+        sessionStorage.setItem("user", JSON.stringify(user));
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+      }
     },
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
-
-      // ✅ Clear localStorage
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("user");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+      }
     },
   },
 });

@@ -694,7 +694,7 @@ export default function ProfileSettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Preferences</CardTitle>
-                <CardDescription>Customize your experience on Sales Pitch</CardDescription>
+                <CardDescription>Customize your experience on Panmae</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">

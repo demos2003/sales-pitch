@@ -17,6 +17,7 @@ import {
 } from "@/api/features/notifications/notificationsSlice"
 import { useCheckSkillsQuery } from "@/api/features/profile/profileSlice"
 import { useGetAllProjectsQuery } from "@/api/features/projects/projectsSlice"
+import { getStoredUser } from "@/api/features/auth/authSlice"
 
 export default function DashboardPage() {
 
@@ -24,9 +25,9 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = getStoredUser();
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      setUser(storedUser);
     }
   }, []);
 
@@ -114,7 +115,8 @@ export default function DashboardPage() {
 
   // Transform projects to match the expected format
   const userProjects = projects.map(project => ({
-    id: project.id,
+    ...project,
+    id: project._id || project.id,
     title: project.title,
     role: project.role || (isFounder ? "Founder" : "Contributor"),
     status: project.status || "In Progress",
@@ -122,7 +124,6 @@ export default function DashboardPage() {
     updates: project.updates || 0,
     messages: project.messages || 0,
     description: project.description || "",
-    ...project
   }))
 
   const tasks = [
@@ -274,7 +275,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 userProjects.slice(0, 2).map((project: any) => (
-                  <Card key={project.id}>
+                  <Card key={project._id || project.id}>
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">
                       <div>
@@ -379,41 +380,40 @@ export default function DashboardPage() {
 
                 {exploreProjects.map((project) => (
                   <Card key={project.id}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-xl">{project.title}</CardTitle>
-                        <Badge variant="outline">{project.type}</Badge>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="text-base font-semibold leading-tight">{project.title}</CardTitle>
+                        <Badge variant="outline" className="text-xs shrink-0">{project.type}</Badge>
                       </div>
-                      <CardDescription>
+                      <CardDescription className="text-xs mt-1">
                         <div className="flex items-center space-x-1">
-                          
                           <span>By {project.founder}</span>
                           <span>•</span>
                           <span>PCA: {project.founderRating}</span>
                         </div>
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground">{project.description}</p>
-                      <div className="mt-4">
-                        <p className="text-sm font-medium">Skills needed:</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
+                    <CardContent className="pt-0">
+                      <p className="text-sm text-muted-foreground line-clamp-3">{project.description}</p>
+                      <div className="mt-3">
+                        <p className="text-xs font-medium text-muted-foreground">Skills needed:</p>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
                           {project.skills.map((skill, index) => (
-                            <Badge key={index} variant="secondary">
+                            <Badge key={index} variant="secondary" className="text-xs font-normal">
                               {skill}
                             </Badge>
                           ))}
                         </div>
                       </div>
-                      <div className="mt-4">
-                        <p className="text-sm">
+                      <div className="mt-3">
+                        <p className="text-xs text-muted-foreground">
                           <span className="font-medium">Timeline:</span> {project.timeline}
                         </p>
                       </div>
                     </CardContent>
-                    <CardFooter>
+                    <CardFooter className="pt-0">
                       <Link href={`/projects/${project.id}`} className="w-full">
-                        <Button className="w-full">View Project</Button>
+                        <Button className="w-full" size="sm">View Project</Button>
                       </Link>
                     </CardFooter>
                   </Card>

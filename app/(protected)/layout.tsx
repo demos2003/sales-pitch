@@ -4,6 +4,7 @@ import type React from "react"
 import { Suspense } from "react"
 import { Loader2 } from "lucide-react"
 import AuthLayout from "@/components/auth-layout"
+import ProtectedSidebarLayout from "@/components/protected-sidebar-layout"
 
 export default function ProtectedLayout({
   children,
@@ -12,15 +13,17 @@ export default function ProtectedLayout({
 }) {
   return (
     <AuthLayout>
-      <Suspense
-        fallback={
-          <div className="flex h-[80vh] w-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        }
-      >
-        {children}
-      </Suspense>
+      <ProtectedSidebarLayout>
+        <Suspense
+          fallback={
+            <div className="flex h-[80vh] w-full items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          }
+        >
+          {children}
+        </Suspense>
+      </ProtectedSidebarLayout>
     </AuthLayout>
   )
 }

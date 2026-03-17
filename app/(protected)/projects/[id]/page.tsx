@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Users, Clock, Award, Briefcase, Star, MessageSquare, Edit, Trash2, Loader2 } from "lucide-react"
 import { useGetProjectByIdQuery } from "@/api/features/projects/projectsSlice"
-import { useEffect, useState } from "react"
+import { use, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { ApplyModal } from "@/components/apply-modal"
 import { useApplyToProjectMutation, useCheckApplicationStatusQuery } from "@/api/features/application/applicationSlice"
@@ -25,19 +25,21 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useDeleteProjectMutation } from "@/api/features/projects/projectsSlice"
 import { useRouter } from "next/navigation"
+import { getStoredUser } from "@/api/features/auth/authSlice"
 
 const formatString = (str: string) => {
   return str?.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-export default function ProjectPage({ params }: { params: { id: string } }) {
+export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [user, setUser] = useState<any>(null);
   const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = getStoredUser();
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      setUser(storedUser);
     }
     setIsClient(true)
   }, []);
@@ -46,7 +48,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const [hasApplied, setHasApplied] = useState(false)
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false)
 
-  const { data: project, isLoading: isProjectLoading, isError: isProjectError } = useGetProjectByIdQuery(params.id as string);
+  const { data: project, isLoading: isProjectLoading, isError: isProjectError } = useGetProjectByIdQuery(id);
   const [applyToProject, { isLoading, isSuccess, isError, reset }] = useApplyToProjectMutation();
   const { data: applicationStatus, isLoading: isCheckingStatus, error: checkStatusError } = useCheckApplicationStatusQuery(project?._id, {
     skip: !project?._id,
@@ -130,16 +132,16 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   ← Back to Projects
                 </Button>
               </Link>
-              <Badge variant="outline">Project Type: {formatString(project.type)}</Badge>
+              <Badge variant="outline" className="text-xs">Project Type: {formatString(project.type)}</Badge>
             </div>
-            <h1 className="text-3xl font-bold">{project.title}</h1>
-            <div className="flex items-center space-x-4">
-              <Avatar>
-                <AvatarFallback>{project.founder.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+            <h1 className="text-xl font-bold tracking-tight">{project.title}</h1>
+            <div className="flex items-center space-x-3">
+              <Avatar className="h-9 w-9">
+                <AvatarFallback className="text-xs">{project.founder.name.substring(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium">{project.founder.name}</p>
-                <p className="text-sm text-muted-foreground">Founder</p>
+                <p className="text-sm font-medium">{project.founder.name}</p>
+                <p className="text-xs text-muted-foreground">Founder</p>
               </div>
             </div>
           </div>
@@ -150,24 +152,24 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
               <TabsTrigger value="updates">Updates</TabsTrigger>
               {isClient && isFounder && <TabsTrigger value="applications">Applications</TabsTrigger>}
             </TabsList>
-            <TabsContent value="overview" className="space-y-6 mt-[25px]">
+            <TabsContent value="overview" className="space-y-4 mt-4">
               <Card>
-                <CardHeader>
-                  <CardTitle>Project Description</CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold">Project Description</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="whitespace-pre-line">{project.description}</p>
+                <CardContent className="pt-0">
+                  <p className="text-sm whitespace-pre-line text-muted-foreground">{project.description}</p>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle>Skills</CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold">Skills</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
+                <CardContent className="pt-0">
+                  <div className="flex flex-wrap gap-1.5">
                     {project.skillSummary.split(",").map((skill: any, index: any) => (
-                      <Badge key={index} variant="secondary">
+                      <Badge key={index} variant="secondary" className="text-xs font-normal">
                         {skill.trim()}
                       </Badge>
                     ))}
@@ -176,19 +178,19 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle>Team Composition</CardTitle>
-                  <CardDescription>Looking for a team of {totalTeamSize}</CardDescription>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold">Team Composition</CardTitle>
+                  <CardDescription className="text-xs">Looking for a team of {totalTeamSize}</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <ul className="space-y-4">
+                <CardContent className="pt-0">
+                  <ul className="space-y-3">
                     {project.rolesNeeded?.map((role: any, index: any) => (
-                      <li key={index} className="flex items-center justify-between">
+                      <li key={index} className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
-                          <Users className="h-5 w-5 text-muted-foreground" />
+                          <Users className="h-4 w-4 text-muted-foreground" />
                           <span>{role.skill}</span>
                         </div>
-                        <Badge variant={"outline"}>
+                        <Badge variant="outline" className="text-xs font-normal">
                           {role.count} Open
                         </Badge>
                       </li>
@@ -197,13 +199,13 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader>
-                  <CardTitle>Compensation</CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold">Compensation</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
+                <CardContent className="pt-0">
+                  <div className="flex flex-wrap gap-1.5">
                     {project.compensation?.map((item: string, index: number) => (
-                      <Badge key={index} variant="secondary">
+                      <Badge key={index} variant="secondary" className="text-xs font-normal">
                         {formatString(item)}
                       </Badge>
                     ))}
@@ -213,32 +215,32 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
             </TabsContent>
 
 
-            <TabsContent value="updates" className="space-y-6 mt-[25px]">
+            <TabsContent value="updates" className="space-y-4 mt-4">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Project Updates</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-base font-semibold">Project Updates</CardTitle>
                   {isClient && isFounder && (
                     <Button size="sm" variant="outline">
-                      <Edit className="mr-2 h-4 w-4" />
+                      <Edit className="mr-2 h-3.5 w-3.5" />
                       Add Update
                     </Button>
                   )}
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                   {project.updates && project.updates.length > 0 ? (
-                    <ul className="space-y-4">
+                    <ul className="space-y-3">
                       {project.updates?.map((update: any, index: any) => (
-                        <li key={index} className="flex items-start space-x-3 pb-4 border-b last:border-0">
-                          <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <li key={index} className="flex items-start space-x-3 pb-3 border-b last:border-0 text-sm">
+                          <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                           <div>
-                            <p className="text-sm text-muted-foreground">{new Date(update.date).toLocaleDateString()}</p>
-                            <p>{update.content}</p>
+                            <p className="text-xs text-muted-foreground">{new Date(update.date).toLocaleDateString()}</p>
+                            <p className="mt-0.5">{update.content}</p>
                           </div>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <div className="text-center text-muted-foreground py-8">
+                    <div className="text-center text-sm text-muted-foreground py-6">
                       <p>No updates available yet.</p>
                     </div>
                   )}
@@ -247,79 +249,73 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
             </TabsContent>
 
             {isClient && isFounder && (
-              <TabsContent value="applications" className="space-y-6">
+              <TabsContent value="applications" className="space-y-4">
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Applications (3)</CardTitle>
-                    <CardDescription>Review and manage applications to your project</CardDescription>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold">Applications (3)</CardTitle>
+                    <CardDescription className="text-xs">Review and manage applications to your project</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-start space-x-4 pb-4 border-b">
-                      <Avatar>
-                        <AvatarFallback>SC</AvatarFallback>
+                  <CardContent className="space-y-3 pt-0">
+                    <div className="flex items-start space-x-3 pb-3 border-b text-sm">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs">SC</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
                           <div>
-                            <p className="font-medium">Sarah Chen</p>
-                            <p className="text-sm text-muted-foreground">UI/UX Designer • DS: 4.9</p>
+                            <p className="font-medium text-sm">Sarah Chen</p>
+                            <p className="text-xs text-muted-foreground">UI/UX Designer • DS: 4.9</p>
                           </div>
-                          <Badge>New</Badge>
+                          <Badge className="text-xs shrink-0">New</Badge>
                         </div>
-                        <p className="text-sm mt-2">
+                        <p className="text-xs text-muted-foreground mt-1.5">
                           I have 3 years of experience designing health apps and would love to contribute to this
                           project.
                         </p>
-                        <div className="flex space-x-2 mt-3">
-                          <Button size="sm" variant="outline">
-                            View Profile
-                          </Button>
+                        <div className="flex space-x-2 mt-2">
+                          <Button size="sm" variant="outline">View Profile</Button>
                           <Button size="sm">Accept</Button>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-start space-x-4 pb-4 border-b">
-                      <Avatar>
-                        <AvatarFallback>JD</AvatarFallback>
+                    <div className="flex items-start space-x-3 pb-3 border-b text-sm">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs">JD</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
                           <div>
-                            <p className="font-medium">John Doe</p>
-                            <p className="text-sm text-muted-foreground">React Native Developer • DS: 4.7</p>
+                            <p className="font-medium text-sm">John Doe</p>
+                            <p className="text-xs text-muted-foreground">React Native Developer • DS: 4.7</p>
                           </div>
                         </div>
-                        <p className="text-sm mt-2">
+                        <p className="text-xs text-muted-foreground mt-1.5">
                           I've built several mobile apps with React Native and have experience with health data APIs.
                         </p>
-                        <div className="flex space-x-2 mt-3">
-                          <Button size="sm" variant="outline">
-                            View Profile
-                          </Button>
+                        <div className="flex space-x-2 mt-2">
+                          <Button size="sm" variant="outline">View Profile</Button>
                           <Button size="sm">Accept</Button>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-start space-x-4">
-                      <Avatar>
-                        <AvatarFallback>RK</AvatarFallback>
+                    <div className="flex items-start space-x-3 text-sm">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs">RK</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
                           <div>
-                            <p className="font-medium">Rachel Kim</p>
-                            <p className="text-sm text-muted-foreground">Backend Developer • DS: 4.8</p>
+                            <p className="font-medium text-sm">Rachel Kim</p>
+                            <p className="text-xs text-muted-foreground">Backend Developer • DS: 4.8</p>
                           </div>
                         </div>
-                        <p className="text-sm mt-2">
+                        <p className="text-xs text-muted-foreground mt-1.5">
                           I specialize in building secure and scalable APIs for health applications.
                         </p>
-                        <div className="flex space-x-2 mt-3">
-                          <Button size="sm" variant="outline">
-                            View Profile
-                          </Button>
+                        <div className="flex space-x-2 mt-2">
+                          <Button size="sm" variant="outline">View Profile</Button>
                           <Button size="sm">Accept</Button>
                         </div>
                       </div>
@@ -331,15 +327,15 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           </Tabs>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {isClient ? (
             isFounder ? (
               <Card>
-                <CardHeader>
-                  <CardTitle>Project Management</CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold">Project Management</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <Link href={`/projects/${params.id}/edit`} className="w-full">
+                <CardContent className="space-y-3 pt-0">
+                  <Link href={`/projects/${id}/edit`} className="w-full">
                     <Button className="w-full">
                       <Edit className="mr-2 h-4 w-4" />
                       Edit Project
@@ -370,22 +366,22 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
               </Card>
             ) : (
               <Card>
-                <CardHeader>
-                  <CardTitle>Apply to Join</CardTitle>
-                  <CardDescription>Express your interest in this project</CardDescription>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold">Apply to Join</CardTitle>
+                  <CardDescription className="text-xs">Express your interest in this project</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3 pt-0">
                   {isCheckingStatus ? (
                     <div className="flex items-center justify-center py-4">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
                     </div>
                   ) : applicationStatus?.hasApplied === true ? (
                     <div className="text-center py-2">
-                      <Badge variant="outline" className="mb-2">
+                      <Badge variant="outline" className="mb-2 text-xs">
                         Application Status: {formatString(applicationStatus.application.status)}
                       </Badge>
                       {applicationStatus.message && (
-                        <p className="text-sm text-muted-foreground">{applicationStatus.message}</p>
+                        <p className="text-xs text-muted-foreground">{applicationStatus.message}</p>
                       )}
                     </div>
                   ) : (
@@ -402,11 +398,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
             )
           ) : (
             <Card>
-              <CardHeader>
-                <CardTitle>Apply to Join</CardTitle>
-                <CardDescription>Express your interest in this project</CardDescription>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold">Apply to Join</CardTitle>
+                <CardDescription className="text-xs">Express your interest in this project</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 pt-0">
                 <Button className="w-full" disabled>
                   Apply Now
                 </Button>
@@ -419,13 +415,13 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           )}
 
           <Card>
-            <CardHeader>
-              <CardTitle>Project Details</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">Project Details</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 pt-0 text-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Clock className="h-5 w-5 text-muted-foreground" />
+                  <Clock className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Duration</span>
                 </div>
                 <span>{formatString(project.timeline)}</span>
@@ -433,7 +429,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Users className="h-5 w-5 text-muted-foreground" />
+                  <Users className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Team Size</span>
                 </div>
                 <span>{totalTeamSize}</span>
@@ -441,7 +437,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Star className="h-5 w-5 text-muted-foreground" />
+                  <Star className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Founder Rating</span>
                 </div>
                 <span>PCA: 5.0</span>
@@ -449,7 +445,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Award className="h-5 w-5 text-muted-foreground" />
+                  <Award className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Time Commitment</span>
                 </div>
                 <span>{formatString(project.timeCommitment)}</span>
@@ -459,20 +455,20 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
           {isClient && !isFounder && (
             <Card>
-              <CardHeader>
-                <CardTitle>Similar Projects</CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold">Similar Projects</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-2 pt-0">
                 <Link href="/projects/2" className="block">
-                  <div className="rounded-lg border p-3 hover:bg-muted/50">
-                    <h3 className="font-medium">Fitness Tracking Wearable</h3>
-                    <p className="text-sm text-muted-foreground">Looking for hardware and software engineers</p>
+                  <div className="rounded-lg border p-2.5 hover:bg-muted/50 text-sm">
+                    <h3 className="font-medium text-sm">Fitness Tracking Wearable</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Looking for hardware and software engineers</p>
                   </div>
                 </Link>
                 <Link href="/projects/3" className="block">
-                  <div className="rounded-lg border p-3 hover:bg-muted/50">
-                    <h3 className="font-medium">Mental Wellness App</h3>
-                    <p className="text-sm text-muted-foreground">Need UI/UX designers and React Native developers</p>
+                  <div className="rounded-lg border p-2.5 hover:bg-muted/50 text-sm">
+                    <h3 className="font-medium text-sm">Mental Wellness App</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Need UI/UX designers and React Native developers</p>
                   </div>
                 </Link>
               </CardContent>

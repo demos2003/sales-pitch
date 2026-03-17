@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="container py-8 md:py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
-            <h3 className="text-lg font-bold">Sales Pitch</h3>
+            <h3 className="text-lg font-bold">Panmae</h3>
             <p className="text-sm text-muted-foreground">
               Connecting passionate founders with talented tech creatives to build innovative products.
             </p>
@@ -24,11 +24,7 @@ export default function Footer() {
                   Create a Project
                 </Link>
               </li>
-              <li>
-                <Link href="/success-stories" className="text-muted-foreground hover:text-foreground">
-                  Success Stories
-                </Link>
-              </li>
+              {/* Success stories area lives on the main landing when validation mode is off */}
             </ul>
           </div>
           <div>
@@ -78,7 +74,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Sales Pitch. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Panmae. All rights reserved.</p>
         </div>
       </div>
     </footer>

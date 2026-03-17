@@ -118,12 +118,51 @@ export function ChatWindow({ roomId, projectId, applicationId, onClose, classNam
     })
   }
 
+  // Get start of day in local time for grouping (YYYY-MM-DD)
+  const getDateKey = (timestamp: Date | string) => {
+    const d = new Date(timestamp)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
+  // Label for date separator: "Today", "Yesterday", or formatted date
+  const formatDayLabel = (dateKey: string) => {
+    const today = getDateKey(new Date())
+    const yesterday = getDateKey(new Date(Date.now() - 86400000))
+    if (dateKey === today) return 'Today'
+    if (dateKey === yesterday) return 'Yesterday'
+    const [y, m, day] = dateKey.split('-').map(Number)
+    return new Date(y, m - 1, day).toLocaleDateString(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: new Date().getFullYear() !== y ? 'numeric' : undefined
+    })
+  }
+
+  const messages = Array.isArray(state.messages) ? state.messages : []
+
+  // Group messages by day (preserving order)
+  const messagesByDay = React.useMemo(() => {
+    const groups: { dateKey: string; messages: Message[] }[] = []
+    let lastDateKey: string | null = null
+    for (const msg of messages) {
+      const ts = msg.timestamp != null ? msg.timestamp : (msg as any).createdAt
+      if (!ts) continue
+      const dateKey = getDateKey(ts)
+      if (dateKey !== lastDateKey) {
+        groups.push({ dateKey, messages: [] })
+        lastDateKey = dateKey
+      }
+      groups[groups.length - 1].messages.push(msg)
+    }
+    return groups
+  }, [messages])
+
   // Check if message is from current user
   const isOwnMessage = (message: Message) => {
-    console.log('Checking message ownership:')
-    console.log('Message senderId:', message.senderId?._id)
-    console.log('Current user ID:', user?._id)
-    console.log('Is own message:', message.senderId?._id === user?._id)
     return message.senderId?._id === user?._id
   }
 
@@ -131,8 +170,6 @@ export function ChatWindow({ roomId, projectId, applicationId, onClose, classNam
   const getUserInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase()
   }
-
-  const messages = Array.isArray(state.messages) ? state.messages : [];
 
  
 
@@ -189,64 +226,70 @@ export function ChatWindow({ roomId, projectId, applicationId, onClose, classNam
                     <p className="text-xs">Start the conversation!</p>
                   </div>
                 ) : (
-                  messages.map((message) => {
-                    console.log('Full message object:', message)
-                    return (
-                    <div
-                      key={message._id}
-                      className={cn(
-                        "flex items-start space-x-2",
-                        isOwnMessage(message) ? "flex-row-reverse space-x-reverse" : ""
-                      )}
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="text-xs">
-                          {getUserInitials(message.senderId.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div
-                        className={cn(
-                          "flex flex-col max-w-[70%]",
-                          isOwnMessage(message) ? "items-end" : "items-start"
-                        )}
-                      >
-                        {
-                          message.content ? (
-                            <div
-                          className={cn(
-                            "rounded-lg px-3 py-2 text-sm",
-                            isOwnMessage(message)
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
-                          )}
-                        >
-                          {message?.content} 
-                        </div> 
-                          ) : (
-                            <div
-                          className={cn(
-                            "rounded-lg px-3 py-2 text-sm",
-                            isOwnMessage(message)
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
-                          )}
-                        >
-                          {message?.message} 
-                        </div> 
-                          )
-                        }
-                     
-                        <div className="flex items-center space-x-1 mt-1">
-                          <span className="text-xs text-muted-foreground">
-                            {message.senderId.name}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatTime(message.timestamp)}
-                          </span>
-                        </div>
+                  messagesByDay.map(({ dateKey, messages: dayMessages }) => (
+                    <div key={dateKey} className="space-y-4">
+                      <div className="flex items-center gap-3 py-2">
+                        <div className="flex-1 h-px bg-border" />
+                        <span className="text-xs font-medium text-muted-foreground px-2">
+                          {formatDayLabel(dateKey)}
+                        </span>
+                        <div className="flex-1 h-px bg-border" />
                       </div>
+                      {dayMessages.map((message) => (
+                        <div
+                          key={message._id}
+                          className={cn(
+                            "flex items-start space-x-2",
+                            isOwnMessage(message) ? "flex-row-reverse space-x-reverse" : ""
+                          )}
+                        >
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="text-xs">
+                              {getUserInitials(message.senderId?.name ?? '')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div
+                            className={cn(
+                              "flex flex-col max-w-[70%]",
+                              isOwnMessage(message) ? "items-end" : "items-start"
+                            )}
+                          >
+                            {message.content ? (
+                              <div
+                                className={cn(
+                                  "rounded-lg px-3 py-2 text-sm",
+                                  isOwnMessage(message)
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted"
+                                )}
+                              >
+                                {message.content}
+                              </div>
+                            ) : (
+                              <div
+                                className={cn(
+                                  "rounded-lg px-3 py-2 text-sm",
+                                  isOwnMessage(message)
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted"
+                                )}
+                              >
+                                {message?.message}
+                              </div>
+                            )}
+                            <div className="flex items-center space-x-1 mt-1">
+                              <span className="text-xs text-muted-foreground">
+                                {message.senderId?.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatTime(message.timestamp)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  )})
+                  ))
                 )}
                 
                 {/* Typing indicators */}

@@ -57,6 +57,9 @@ export default function AuthPage() {
   const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [showSignupPassword, setShowSignupPassword] = useState(false)
 
+  // Remember me: when true use localStorage (persist across sessions), when false use sessionStorage (logout when browser closes)
+  const [rememberMe, setRememberMe] = useState(true)
+
   // Add form errors
   const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: string; general?: string }>({})
   const [signupErrors, setSignupErrors] = useState<{ name?: string; email?: string; password?: string; general?: string }>({})
@@ -116,9 +119,8 @@ const verify2FA = async (otpValue: string) => {
     const response = await verifyOtp({ email: tempAuthData.email, otp: otpValue }).unwrap()
 
     if (response?.token && response?.user) {
-      dispatch(setCredentials({ user: response.user, token: response.token }))
-      localStorage.setItem("user", JSON.stringify(response.user))
-      localStorage.setItem("token", response.token)
+      const remember = tempAuthData.rememberMe !== false
+      dispatch(setCredentials({ user: response.user, token: response.token, remember }))
 
       toast({
         title: "Login successful",
@@ -169,7 +171,7 @@ const handleLogin = async (e: React.FormEvent) => {
     if (response?.message === "OTP sent. Please verify to complete login.") {
       // Show 2FA screen
       setAuthStep("2fa")
-      setTempAuthData({ email }) // Store email to verify OTP later
+      setTempAuthData({ email, rememberMe }) // Store email and rememberMe for after OTP
 
       toast({
         title: "OTP Sent",
@@ -181,9 +183,7 @@ const handleLogin = async (e: React.FormEvent) => {
 
     // If response includes token and user, proceed to login
     if (response.token && response.user) {
-      dispatch(setCredentials({ user: response.user, token: response.token }))
-      localStorage.setItem("user", JSON.stringify(response.user))
-      localStorage.setItem("token", response.token)
+      dispatch(setCredentials({ user: response.user, token: response.token, remember: rememberMe }))
 
       toast({
         title: "Login successful",
@@ -287,7 +287,7 @@ const handleLogin = async (e: React.FormEvent) => {
         {authStep === "credentials" ? (
           <>
             <CardHeader>
-              <CardTitle className="text-2xl">Welcome to Sales Pitch</CardTitle>
+              <CardTitle className="text-2xl">Welcome to Panmae</CardTitle>
               <CardDescription>
                 Join our community of founders and tech creatives to build amazing products together.
               </CardDescription>
@@ -349,8 +349,14 @@ const handleLogin = async (e: React.FormEvent) => {
                       {loginErrors.password && <p className="text-red-500 text-xs mt-1">{loginErrors.password}</p>}
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox id="remember" />
-                      <Label htmlFor="remember">Remember me</Label>
+                      <Checkbox
+                        id="remember"
+                        checked={rememberMe}
+                        onCheckedChange={(checked) => setRememberMe(checked === true)}
+                      />
+                      <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
+                        Remember me
+                      </Label>
                     </div>
                     {loginErrors.general && <p className="text-red-500 text-xs mt-2">{loginErrors.general}</p>}
                   </CardContent>

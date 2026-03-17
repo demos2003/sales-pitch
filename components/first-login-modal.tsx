@@ -64,7 +64,7 @@ export function FirstLoginModal({ isOpen, onComplete }: FirstLoginModalProps) {
           <DialogHeader>
             <DialogTitle>
               {step === 1
-                ? "Welcome to Sales Pitch!"
+                ? "Welcome to Panmae!"
                 : step === 2
                   ? "Complete Your Profile"
                   : "Find Your First Project"}

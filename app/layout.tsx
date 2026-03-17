@@ -2,22 +2,29 @@
 import type React from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { Inter } from "next/font/google";
+import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/header";
-import Footer from "@/components/footer";
+import FooterVisibility from "@/components/footer-visibility";
 // import { AuthProvider } from "@/context/auth-context";
 import ReduxProvider from "@/api/provider";
-import { store } from "@/api/store";
 import { ChatProvider } from "@/context/chat-context";
 
-const inter = Inter({ subsets: ["latin"] });
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
 
 export const metadata = {
-  title: "Sales Pitch - Connect Founders with Tech Creatives",
+  title: "Panmae - Connect Founders with Tech Creatives",
   description:
     "A platform where startup founders and passion-driven tech creatives collaborate on innovative products",
   generator: "v0.dev",
+  icons: {
+    icon: "/Panmae2.png",
+    apple: "/Panmae2.png",
+  },
 };
 
 export default function RootLayout({
@@ -26,21 +33,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className={dmSans.variable}>
         <ReduxProvider > 
           {/* <AuthProvider> */}
             <ChatProvider>
               <ThemeProvider
                 attribute="class"
-                defaultTheme="light"
-                enableSystem
+                defaultTheme="dark"
+                enableSystem={false}
+                forcedTheme="dark"
                 disableTransitionOnChange
               >
                 <div className="flex min-h-screen flex-col">
                   <Header />
                   <main className="flex-1">{children}</main>
-                  <Footer />
+                  <FooterVisibility />
                 </div>
                 <Toaster/>
              

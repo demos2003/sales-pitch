@@ -1,16 +1,17 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import backendUrl from "./config";
 import { logout } from "./features/auth/authSlice";
+import { getStoredToken } from "./features/auth/authSlice";
 import { isTokenExpired } from "@/utils/auth";
 
 const baseQueryWithAuth = fetchBaseQuery({
   baseUrl: backendUrl.baseURL,
-  prepareHeaders: (headers, { getState }) => {
-    const token = localStorage.getItem("token");
+  prepareHeaders: (headers) => {
+    const token = getStoredToken();
     if (token) {
-      // Check if token is expired before making request
       if (isTokenExpired(token)) {
-        // Token is expired, remove it and don't add to headers
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("user");
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         return headers;

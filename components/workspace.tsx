@@ -54,8 +54,11 @@ import {
 } from "@/components/ui/dialog"
 import { useGetGroupChatsQuery, useUploadFileMutation, useCreatePollMutation, useVotePollMutation } from "@/api/features/chat/chatApiSlice"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useChat } from "@/context/chat-context"
 import { cn } from "@/lib/utils"
+import { WorkspaceSchedule } from "@/components/workspace-schedule"
+import { WorkspaceUpcomingSchedule } from "@/components/workspace-upcoming-schedule"
 
 interface TeamMember {
   id: string
@@ -82,6 +85,7 @@ interface TeamChatInterfaceProps {
 
 export function Workspace({ projectId, projectTitle, isFounder }: TeamChatInterfaceProps) {
   const [selectedChannel, setSelectedChannel] = useState("project1")
+  const [workspaceTab, setWorkspaceTab] = useState<"chat" | "schedule">("chat")
   const [newMessage, setNewMessage] = useState("")
   const [showPollDialog, setShowPollDialog] = useState(false)
   const [pollQuestion, setPollQuestion] = useState("")
@@ -353,18 +357,24 @@ export function Workspace({ projectId, projectTitle, isFounder }: TeamChatInterf
         </div>
       </div>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Chat Header */}
-        <div className="p-4 border-b flex items-center justify-between">
+      {/* Main Content: Chat + Schedule */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header with Chat / Schedule tabs */}
+        <div className="p-4 border-b flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center space-x-2">
             <Hash className="h-5 w-5 text-muted-foreground" />
             {isLoadingGroupChats ? (
               <Skeleton className="h-4 w-48" />
             ) : (
-              <h3 className="font-medium">{selectedProjectName || ""}</h3>
+              <h3 className="font-medium truncate">{selectedProjectName || ""}</h3>
             )}
           </div>
+          <Tabs value={workspaceTab} onValueChange={(v) => setWorkspaceTab(v as "chat" | "schedule")} className="w-auto">
+            <TabsList>
+              <TabsTrigger value="chat">Chat</TabsTrigger>
+              <TabsTrigger value="schedule">Schedule</TabsTrigger>
+            </TabsList>
+          </Tabs>
           <div className="flex items-center space-x-2">
             <Button variant="ghost" size="icon">
               <Users className="h-4 w-4" />
@@ -375,6 +385,23 @@ export function Workspace({ projectId, projectTitle, isFounder }: TeamChatInterf
           </div>
         </div>
 
+        {workspaceTab === "schedule" ? (
+          selectedChannel && selectedProjectName ? (
+          <WorkspaceSchedule
+            projectId={selectedChannel}
+            projectName={selectedProjectName}
+          />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground p-4">
+              Select a project from the sidebar to view its schedule.
+            </div>
+          )
+        ) : (
+          <>
+        {/* Upcoming schedule in chat */}
+        {selectedChannel && (
+          <WorkspaceUpcomingSchedule projectId={selectedChannel} maxItems={6} />
+        )}
         {/* Messages */}
         <ScrollArea className="flex-1 p-4">
   <div className="space-y-4">
@@ -630,6 +657,8 @@ export function Workspace({ projectId, projectTitle, isFounder }: TeamChatInterf
             </div>
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   )

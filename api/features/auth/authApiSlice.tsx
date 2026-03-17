@@ -32,6 +32,20 @@ export const authApiSlice = apiSlice.injectEndpoints({
         body: { email, otp },
       }),
     }),
+    requestPasswordReset: builder.mutation({
+      query: ({ email }) => ({
+        url: "/auth/forgot-password",
+        method: "POST",
+        body: { email },
+      }),
+    }),
+    resetPassword: builder.mutation({
+      query: ({ email, otp, newPassword }) => ({
+        url: "/auth/reset-password",
+        method: "POST",
+        body: { email, otp, newPassword },
+      }),
+    }),
     getCurrentUser: builder.query<any, void>({ // 👈 return type, argument type
       query: () => "/users/me",
     }),
@@ -52,6 +66,8 @@ export const {
   useSignUpMutation,
   useToggle2faMutation,
   useVerifyOtpMutation,
+  useRequestPasswordResetMutation,
+  useResetPasswordMutation,
   useGetCurrentUserQuery,
   useRefreshTokenMutation
 } = authApiSlice

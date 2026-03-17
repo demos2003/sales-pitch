@@ -17,15 +17,16 @@ import { toast } from "@/components/ui/use-toast"
 import { Separator } from "@/components/ui/separator"
 import { useEffect } from "react"
 import { useGetMyApplicationsQuery, useGetApplicationsGroupedByProjectForFounderQuery, useCancelApplicationMutation } from "@/api/features/application/applicationSlice"
+import { getStoredUser } from "@/api/features/auth/authSlice"
 
 export default function ApplicationsPage() {
   const [user, setUser] = useState<any>(null);
   const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = getStoredUser();
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      setUser(storedUser);
     }
     setIsClient(true)
   }, []);
@@ -473,4 +474,4 @@ export default function ApplicationsPage() {
       </div>
     </div>
   )
-} 
+}

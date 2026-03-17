@@ -35,12 +35,12 @@ export default function ChatPage() {
         </TabsList>
         
         <TabsContent value="messages" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(380px,420px)_1fr] gap-6">
+            <div className="min-w-0">
               <ChatList onChatSelect={handleChatSelect} selectedChatId={selectedChat?.roomId} />
             </div>
             
-            <div className="lg:col-span-2">
+            <div className="min-w-0">
               {selectedChat ? (
                 <ChatWindow
                   roomId={selectedChat.roomId}

@@ -4,8 +4,7 @@
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { ModeToggle } from "./mode-toggle"
-import { Menu, X, User, LogOut, Settings, PlusCircle } from "lucide-react"
+import { Menu, X, User, LogOut, Settings } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import Image from "next/image"
@@ -21,10 +20,13 @@ import { useDispatch, useSelector } from "react-redux"
 import SessionStatus from "@/components/session-status"
 import { logout } from "@/api/features/auth/authSlice"
 import { RootState } from "@/api/store"
+import { VALIDATION_WEBSITE } from "@/lib/flags"
+import { WaitlistDialog } from "@/components/waitlist-dialog"
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isClient, setIsClient] = useState(false)
+  const [waitlistOpen, setWaitlistOpen] = useState(false)
   const pathname = usePathname()
   const dispatch = useDispatch()
   const user = useSelector((state: RootState) => state.auth.user)
@@ -41,17 +43,9 @@ export default function Header() {
     { name: "About", href: "/about" },
   ]
 
-  const privateNavigation = [
-    { name: "Dashboard", href: "/dashboard" },
-    { name: "Projects", href: "/projects" },
-    { name: "Applications", href: "/messages" },
-    { name: "Messages", href: "/chat" },
-  ]
-
   const isFounder = user?.role === "founder"
-
-  // Use public navigation during SSR, then switch to appropriate navigation on client
-  const navigation = isClient && user ? privateNavigation : publicNavigation
+  const isAuthenticated = isClient && !!user
+  const navigation = VALIDATION_WEBSITE ? [] : publicNavigation
 
   const handleLogout = () => {
     dispatch(logout())
@@ -63,30 +57,30 @@ export default function Header() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
           <Link href={isClient && user ? "/dashboard" : "/"} className="flex items-center">
-            <Image src="/SalesPitchLogo.png" alt="slaes-pitch-logo" width={70} height={70} />
-            <span className="text-xl font-bold">Sales Pitch</span>
+            <Image src="/Panmae2.png" alt="Panmae logo" width={70} height={70} />
+            <span className="text-xl font-bold">Panmae</span>
           </Link>
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6">
-          {navigation.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                pathname === item.href ? "text-primary" : "text-muted-foreground"
-              }`}
-            >
-              {item.name}
-            </Link>
-          ))}
-        </nav>
+        {!isAuthenticated && (
+          <nav className="hidden md:flex items-center gap-6">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  pathname === item.href ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                {item.name}
+              </Link>
+            ))}
+          </nav>
+        )}
 
         <div className="hidden md:flex items-center gap-4">
        
-          <ModeToggle />
-
           {isClient && user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -100,7 +94,7 @@ export default function Header() {
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/profile">
+                  <Link href="/profile/settings">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </Link>
@@ -111,14 +105,6 @@ export default function Header() {
                     <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
-                {isClient && isFounder && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/create-project">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      <span>Create Project</span>
-                    </Link>
-                  </DropdownMenuItem>
-                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
@@ -126,6 +112,12 @@ export default function Header() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          ) : VALIDATION_WEBSITE ? (
+            <>
+              <Button size="sm" onClick={() => setWaitlistOpen(true)}>
+                Join waitlist
+              </Button>
+            </>
           ) : (
             <>
               <Link href="/auth">
@@ -142,7 +134,6 @@ export default function Header() {
 
         {/* Mobile Navigation */}
         <div className="flex md:hidden items-center gap-4">
-          <ModeToggle />
           <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Toggle Menu">
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </Button>
@@ -150,7 +141,7 @@ export default function Header() {
       </div>
 
       {/* Mobile Menu */}
-      {isMenuOpen && (
+      {isMenuOpen && !isAuthenticated && (
         <div className="md:hidden border-t">
           <div className="container py-4 flex flex-col space-y-4">
             {navigation.map((item) => (
@@ -168,26 +159,12 @@ export default function Header() {
 
             {isClient && user ? (
               <>
-                <Link href="/profile" onClick={() => setIsMenuOpen(false)}>
-                  <Button variant="outline" className="w-full flex items-center justify-start">
-                    <User className="mr-2 h-4 w-4" />
-                    Profile
-                  </Button>
-                </Link>
                 <Link href="/profile/settings" onClick={() => setIsMenuOpen(false)}>
                   <Button variant="outline" className="w-full flex items-center justify-start">
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
                   </Button>
                 </Link>
-                {isClient && isFounder && (
-                  <Link href="/create-project" onClick={() => setIsMenuOpen(false)}>
-                    <Button variant="outline" className="w-full flex items-center justify-start">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Create Project
-                    </Button>
-                  </Link>
-                )}
                 <Button
                   variant="outline"
                   className="w-full flex items-center justify-start"
@@ -200,6 +177,18 @@ export default function Header() {
                   Log out
                 </Button>
               </>
+            ) : VALIDATION_WEBSITE ? (
+              <div className="flex flex-col gap-2 pt-2 border-t">
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    setWaitlistOpen(true)
+                    setIsMenuOpen(false)
+                  }}
+                >
+                  Join waitlist
+                </Button>
+              </div>
             ) : (
               <div className="flex flex-col gap-2 pt-2 border-t">
                 <Link href="/auth" onClick={() => setIsMenuOpen(false)}>
@@ -214,6 +203,9 @@ export default function Header() {
             )}
           </div>
         </div>
+      )}
+      {VALIDATION_WEBSITE && (
+        <WaitlistDialog open={waitlistOpen} onOpenChange={setWaitlistOpen} source="header" />
       )}
     </header>
   )

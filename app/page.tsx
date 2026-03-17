@@ -3,6 +3,7 @@ import { FeatureSection } from "@/components/feature-section"
 import { HowItWorksSection } from "@/components/how-it-works-section"
 import { TestimonialsSection } from "@/components/testimonials-section"
 import { CTASection } from "@/components/cta-section"
+import { VALIDATION_WEBSITE } from "@/lib/flags"
 
 export default function Home() {
   return (
@@ -10,7 +11,7 @@ export default function Home() {
       <HeroSection />
       <FeatureSection />
       <HowItWorksSection />
-      <TestimonialsSection />
+      {!VALIDATION_WEBSITE && <TestimonialsSection />}
       <CTASection />
     </div>
   )
