@@ -24,7 +24,7 @@ export function WaitlistDialog({ open, onOpenChange, source }: WaitlistDialogPro
         </DialogHeader>
         <form
           className="space-y-4 mt-4"
-          action="https://formspree.io/f/mayvkkjg"
+          action="https://formspree.io/f/xojkpnlk"
           method="POST"
           onSubmit={() => setSubmitting(true)}
         >

@@ -13,7 +13,7 @@ export default function WaitlistPage() {
         </div>
         <form
           className="space-y-4"
-          action="https://formspree.io/f/mayvkkjg"
+          action="https://formspree.io/f/xojkpnlk"
           method="POST"
         >
           <div className="space-y-1">
